@@ -20,3 +20,65 @@ main {
 h1 {
   margin: 0 0 12px;
 }
+
+/*  */
+
+header {
+  margin-bottom: 32px;
+}
+
+nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+nav a {
+  color: #0066cc;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+}
+
+form div {
+  display: grid;
+  gap: 6px;
+}
+
+input,
+button {
+  font: inherit;
+  padding: 10px;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  background: #007a4d;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #00623e;
+}
+
+.result-card {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.error-message {
+  color: #c62828;
+  font-weight: bold;
+}
+
+.notice-message {
+  color: #00623e;
+  font-weight: bold;
+}
