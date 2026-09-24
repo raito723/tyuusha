@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { calculateParkingFee } from "../lib/feeCalculator";
+import {
+    calculateParkingFee,
+    findTimeReachingFee,
+} from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
 
 export function FeeCalculatorPage() {
@@ -9,21 +12,44 @@ export function FeeCalculatorPage() {
     const [dayPrice, setDayPrice] = useState(200);
     const [nightPrice, setNightPrice] = useState(100);
     const [maximumFee, setMaximumFee] = useState(1000);
+    const [budget, setBudget] = useState(0);
     const [result, setResult] = useState(null);
     const [savedRules, setSavedRules] = useState(getParkingRules());
 
     function handleSubmit(event) {
         event.preventDefault();
 
-        const calculationResult = calculateParkingFee({
+        const feeSettings = {
             startTime,
             endTime,
             dayPrice: Number(dayPrice),
             nightPrice: Number(nightPrice),
             maximumFee: Number(maximumFee),
+        };
+
+        const calculationResult = calculateParkingFee(feeSettings);
+
+        if (calculationResult.error) {
+            setResult(calculationResult);
+            return;
+        }
+
+        const budgetReachedAt = findTimeReachingFee({
+            ...feeSettings,
+            targetFee: Number(budget),
         });
 
-        setResult(calculationResult);
+        const maximumFeeReachedAt = findTimeReachingFee({
+            ...feeSettings,
+            targetFee: Number(maximumFee),
+        });
+
+        setResult({
+            ...calculationResult,
+            budget: Number(budget),
+            budgetReachedAt,
+            maximumFeeReachedAt,
+        });
     }
 
     function handleSaveRule() {
@@ -189,6 +215,17 @@ export function FeeCalculatorPage() {
                     />
                 </div>
 
+                <div>
+                    <label htmlFor="budget">予算額（円・設定しない場合は0）</label>
+                    <input
+                        id="budget"
+                        type="number"
+                        min="0"
+                        value={budget}
+                        onChange={(event) => setBudget(event.target.value)}
+                    />
+                </div>
+
                 <div className="button-group">
                     <button type="submit">料金を計算する</button>
                     <button type="button" onClick={handleSaveRule}>
@@ -205,6 +242,7 @@ export function FeeCalculatorPage() {
 
                     <p>昼間の駐車時間：{result.dayMinutes}分</p>
                     <p>昼料金：{result.dayFee.toLocaleString()}円</p>
+
                     <p>夜間の駐車時間：{result.nightMinutes}分</p>
                     <p>夜料金：{result.nightFee.toLocaleString()}円</p>
 
@@ -216,6 +254,26 @@ export function FeeCalculatorPage() {
                     {result.maximumFeeApplied && (
                         <p className="notice-message">
                             最大料金が適用されています。
+                        </p>
+                    )}
+
+                    {result.budget > 0 && result.totalFee > result.budget && (
+                        <p className="warning-message">
+                            予算を{(result.totalFee - result.budget).toLocaleString()}円超える見込みです。
+                        </p>
+                    )}
+
+                    {result.budgetReachedAt && (
+                        <p>
+                            予算額に達する予定時刻：
+                            {result.budgetReachedAt.toLocaleString("ja-JP")}
+                        </p>
+                    )}
+
+                    {result.maximumFeeReachedAt && (
+                        <p>
+                            最大料金に達する予定時刻：
+                            {result.maximumFeeReachedAt.toLocaleString("ja-JP")}
                         </p>
                     )}
                 </section>

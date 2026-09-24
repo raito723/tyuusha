@@ -65,3 +65,47 @@ export function calculateParkingFee({
         maximumFeeApplied: hasMaximumFee && regularFee >= maximumFee,
     };
 }
+// 料金が指定額に達する最初の時刻を探す処理
+export function findTimeReachingFee({
+    startTime,
+    endTime,
+    dayPrice,
+    nightPrice,
+    maximumFee,
+    targetFee,
+}) {
+    if (!targetFee || targetFee <= 0) {
+        return null;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return null;
+    }
+
+    if (end <= start) {
+        return null;
+    }
+
+    const current = new Date(start);
+
+    while (current < end) {
+        current.setMinutes(current.getMinutes() + 1);
+
+        const result = calculateParkingFee({
+            startTime: start,
+            endTime: current,
+            dayPrice,
+            nightPrice,
+            maximumFee,
+        });
+
+        if (!result.error && result.totalFee >= targetFee) {
+            return current;
+        }
+    }
+
+    return null;
+}

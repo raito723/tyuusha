@@ -102,3 +102,11 @@ button:hover {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+.warning-message {
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff3cd;
+  color: #7a4b00;
+  font-weight: bold;
+}
