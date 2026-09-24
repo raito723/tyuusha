@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
     calculateParkingFee,
     findTimeReachingFee,
+    getNextFeeChangeTime,
 } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
+import {
+    clearScheduledNotifications,
+    requestNotificationPermission,
+    scheduleNotification,
+} from "../lib/notifications";
 
 export function FeeCalculatorPage() {
     const [ruleName, setRuleName] = useState("");
@@ -15,6 +21,8 @@ export function FeeCalculatorPage() {
     const [budget, setBudget] = useState(0);
     const [result, setResult] = useState(null);
     const [savedRules, setSavedRules] = useState(getParkingRules());
+    const [notificationMessage, setNotificationMessage] = useState("");
+    const notificationTimerIds = useRef([]);
 
     function handleSubmit(event) {
         event.preventDefault();
@@ -49,7 +57,81 @@ export function FeeCalculatorPage() {
             budget: Number(budget),
             budgetReachedAt,
             maximumFeeReachedAt,
+            nextFeeChangeAt: getNextFeeChangeTime({
+                startTime,
+                endTime,
+            }),
         });
+    }
+
+    async function handleEnableNotifications() {
+        const permissionResult = await requestNotificationPermission();
+
+        setNotificationMessage(permissionResult.message);
+    }
+
+    function handleScheduleNotifications() {
+        if (Notification.permission !== "granted") {
+            setNotificationMessage("先に「通知を許可する」を押してください。");
+            return;
+        }
+
+        if (!result) {
+            setNotificationMessage("先に料金を計算してください。");
+            return;
+        }
+
+        clearScheduledNotifications(notificationTimerIds.current);
+        notificationTimerIds.current = [];
+
+        const timerIds = [];
+
+        if (result.nextFeeChangeAt) {
+            const timerId = scheduleNotification({
+                title: "料金変更のお知らせ",
+                body: `料金体系が切り替わる予定です。${result.nextFeeChangeAt.toLocaleString(
+                    "ja-JP"
+                )}に料金を確認してください。`,
+                notificationTime: result.nextFeeChangeAt,
+            });
+
+            if (timerId) {
+                timerIds.push(timerId);
+            }
+        }
+
+        if (result.budgetReachedAt) {
+            const timerId = scheduleNotification({
+                title: "予算到達のお知らせ",
+                body: `設定した予算額${result.budget.toLocaleString()}円に達する予定です。`,
+                notificationTime: result.budgetReachedAt,
+            });
+
+            if (timerId) {
+                timerIds.push(timerId);
+            }
+        }
+
+        if (result.maximumFeeReachedAt) {
+            const timerId = scheduleNotification({
+                title: "最大料金到達のお知らせ",
+                body: "設定した最大料金に達する予定です。",
+                notificationTime: result.maximumFeeReachedAt,
+            });
+
+            if (timerId) {
+                timerIds.push(timerId);
+            }
+        }
+
+        notificationTimerIds.current = timerIds;
+
+        if (timerIds.length === 0) {
+            setNotificationMessage("通知できる予定時刻がありません。");
+            return;
+        }
+
+        setNotificationMessage(`${timerIds.length}件の通知を設定しました。`);
     }
 
     function handleSaveRule() {
@@ -275,6 +357,23 @@ export function FeeCalculatorPage() {
                             最大料金に達する予定時刻：
                             {result.maximumFeeReachedAt.toLocaleString("ja-JP")}
                         </p>
+                    )}
+                    <hr />
+
+                    <h3>通知設定</h3>
+
+                    <div className="button-group">
+                        <button type="button" onClick={handleEnableNotifications}>
+                            通知を許可する
+                        </button>
+
+                        <button type="button" onClick={handleScheduleNotifications}>
+                            通知を設定する
+                        </button>
+                    </div>
+
+                    {notificationMessage && (
+                        <p className="notice-message">{notificationMessage}</p>
                     )}
                 </section>
             )}
