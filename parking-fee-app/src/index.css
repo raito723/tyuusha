@@ -82,3 +82,23 @@ button:hover {
   color: #00623e;
   font-weight: bold;
 }
+
+.rule-card {
+  display: grid;
+  gap: 12px;
+  max-width: 440px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border-radius: 8px;
+  background: #e9f6ef;
+}
+
+.rule-card h3 {
+  margin: 0;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
