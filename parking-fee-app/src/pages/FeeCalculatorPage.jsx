@@ -4,8 +4,9 @@ import { calculateParkingFee } from "../lib/feeCalculator";
 export function FeeCalculatorPage() {
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
-    const [pricePer30Minutes, setPricePer30Minutes] = useState(200);
-    const [maximumFee, setMaximumFee] = useState(0);
+    const [dayPrice, setDayPrice] = useState(200);
+    const [nightPrice, setNightPrice] = useState(100);
+    const [maximumFee, setMaximumFee] = useState(1000);
     const [result, setResult] = useState(null);
 
     function handleSubmit(event) {
@@ -14,7 +15,8 @@ export function FeeCalculatorPage() {
         const calculationResult = calculateParkingFee({
             startTime,
             endTime,
-            pricePer30Minutes: Number(pricePer30Minutes),
+            dayPrice: Number(dayPrice),
+            nightPrice: Number(nightPrice),
             maximumFee: Number(maximumFee),
         });
 
@@ -24,7 +26,7 @@ export function FeeCalculatorPage() {
     return (
         <section>
             <h2>料金計算</h2>
-            <p>駐車する予定の時間と料金を入力してください。</p>
+            <p>時間帯ごとの料金を入力して、予想料金を確認します。</p>
 
             <form onSubmit={handleSubmit}>
                 <div>
@@ -50,13 +52,29 @@ export function FeeCalculatorPage() {
                 </div>
 
                 <div>
-                    <label htmlFor="pricePer30Minutes">30分あたりの料金（円）</label>
+                    <label htmlFor="dayPrice">
+                        昼料金：30分あたりの料金（8:00〜20:00）
+                    </label>
                     <input
-                        id="pricePer30Minutes"
+                        id="dayPrice"
                         type="number"
                         min="0"
-                        value={pricePer30Minutes}
-                        onChange={(event) => setPricePer30Minutes(event.target.value)}
+                        value={dayPrice}
+                        onChange={(event) => setDayPrice(event.target.value)}
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="nightPrice">
+                        夜料金：60分あたりの料金（20:00〜翌8:00）
+                    </label>
+                    <input
+                        id="nightPrice"
+                        type="number"
+                        min="0"
+                        value={nightPrice}
+                        onChange={(event) => setNightPrice(event.target.value)}
                         required
                     />
                 </div>
@@ -76,25 +94,22 @@ export function FeeCalculatorPage() {
                 <button type="submit">料金を計算する</button>
             </form>
 
-            {result && result.error && (
-                <p className="error-message">{result.error}</p>
-            )}
+            {result?.error && <p className="error-message">{result.error}</p>}
 
             {result && !result.error && (
                 <section className="result-card">
                     <h3>計算結果</h3>
 
-                    <p>
-                        駐車時間：{result.parkingMinutes}分
-                    </p>
+                    <p>昼間の駐車時間：{result.dayMinutes}分</p>
+                    <p>昼料金：{result.dayFee.toLocaleString()}円</p>
 
-                    <p>
-                        料金：{result.totalFee.toLocaleString()}円
-                    </p>
+                    <p>夜間の駐車時間：{result.nightMinutes}分</p>
+                    <p>夜料金：{result.nightFee.toLocaleString()}円</p>
 
-                    <p>
-                        30分単位：{result.units}回
-                    </p>
+                    <hr />
+
+                    <p>通常料金：{result.regularFee.toLocaleString()}円</p>
+                    <p>予想料金：{result.totalFee.toLocaleString()}円</p>
 
                     {result.maximumFeeApplied && (
                         <p className="notice-message">
