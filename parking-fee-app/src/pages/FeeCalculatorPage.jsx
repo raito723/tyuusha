@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     calculateParkingFee,
