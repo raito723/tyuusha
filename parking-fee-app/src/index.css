@@ -36,28 +36,95 @@ header {
   z-index: 10;
   inset-inline: 0;
   bottom: 0;
-  width: min(100%, 720px);
-  margin: 0 auto;
-  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  padding: 0 18px calc(8px + env(safe-area-inset-bottom));
   background: #ffffff;
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  border-top: 1px solid #d8dfdd;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
 }
 
-nav {
+header h1 {
+  display: none;
+}
+
+nav.bottom-navigation {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  height: 108px;
+  gap: 8px;
+  margin: 0;
+}
+
+.bottom-navigation-item {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-nav a {
-  color: var(--color-text);
+  height: 76px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  padding: 8px 4px 3px;
+  color: #91a5a3;
   text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: color 160ms ease;
 }
 
-nav a:hover {
-  text-decoration: underline;
+.bottom-navigation-item:hover,
+.bottom-navigation-item.active {
+  color: #607d7a;
+}
+
+.bottom-navigation-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 2px solid currentColor;
+  border-radius: 7px;
+  opacity: 0.9;
+}
+
+.bottom-navigation-camera {
+  justify-content: flex-start;
+  gap: 5px;
+  padding-top: 0;
+}
+
+.bottom-navigation-camera-button {
+  display: grid;
+  width: 70px;
+  height: 70px;
+  place-items: center;
+  margin-top: -34px;
+  border: 6px solid #ffffff;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 3px 10px rgba(0, 123, 101, 0.2);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.bottom-navigation-camera-button .bottom-navigation-icon {
+  width: 25px;
+  height: 18px;
+  border-color: #06372f;
+  border-radius: 4px;
+}
+
+.bottom-navigation-camera-button .bottom-navigation-icon::after {
+  content: "";
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 3px auto;
+  border: 2px solid #06372f;
+  border-radius: 50%;
+}
+
+.bottom-navigation-camera:hover .bottom-navigation-camera-button,
+.bottom-navigation-camera.active .bottom-navigation-camera-button {
+  background: #008f72;
+  transform: translateY(-2px);
 
 }
 
@@ -133,7 +200,7 @@ button:hover {
   padding: 20px;
   border-radius: 15px;
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .error-message {
