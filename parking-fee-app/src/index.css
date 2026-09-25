@@ -21,8 +21,6 @@ h1 {
   margin: 0 0 12px;
 }
 
-/*  */
-
 header {
   margin-bottom: 32px;
 }
@@ -35,12 +33,17 @@ nav {
 
 nav a {
   color: #0066cc;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
 }
 
 form {
   display: grid;
   gap: 16px;
-  max-width: 440px;
+  max-width: 480px;
 }
 
 form div {
@@ -49,21 +52,57 @@ form div {
 }
 
 input,
+select,
 button {
   font: inherit;
   padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
 button {
   border: 0;
-  border-radius: 6px;
   background: #007a4d;
   color: #ffffff;
   cursor: pointer;
+  font-weight: bold;
 }
 
 button:hover {
   background: #00623e;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.btn-secondary:hover {
+  background: #f0f0f0;
+}
+
+.btn-accent {
+  background: #0066cc;
+  color: #ffffff;
+}
+
+.btn-accent:hover {
+  background: #0052a3;
+}
+
+.btn-icon {
+  background: transparent;
+  color: #888;
+  border: 0;
+  padding: 4px 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  color: #333;
+  background: #eee;
 }
 
 .result-card {
@@ -71,6 +110,7 @@ button:hover {
   padding: 20px;
   border-radius: 8px;
   background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .error-message {
@@ -86,7 +126,7 @@ button:hover {
 .rule-card {
   display: grid;
   gap: 12px;
-  max-width: 440px;
+  max-width: 480px;
   margin-bottom: 28px;
   padding: 20px;
   border-radius: 8px;
