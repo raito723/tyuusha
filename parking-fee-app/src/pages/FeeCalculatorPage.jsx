@@ -1,3 +1,5 @@
+import { useRef, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,6 +13,7 @@ import { ImageOcrModal } from "../components/ImageOcrModal";
 import { notificationService } from "../lib/notificationService";
 
 export function FeeCalculatorPage() {
+    const location = useLocation();
     const navigate = useNavigate();
 
     const [ruleName, setRuleName] = useState("");
@@ -25,6 +28,16 @@ export function FeeCalculatorPage() {
     const [notificationMessage, setNotificationMessage] = useState("");
     const notificationTimerIds = useRef([]);
 
+    // マップ画面等からプリセット情報が渡された場合の自動入力
+    useEffect(() => {
+        if (location.state?.presetRule) {
+            const rule = location.state.presetRule;
+            if (rule.name) setRuleName(rule.name);
+            if (rule.dayPrice !== undefined) setDayPrice(rule.dayPrice);
+            if (rule.nightPrice !== undefined) setNightPrice(rule.nightPrice);
+            if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee);
+        }
+    }, [location.state]);
     // Phase 3: 写真読取モーダル開閉
     const [isOcrOpen, setIsOcrOpen] = useState(false);
 
