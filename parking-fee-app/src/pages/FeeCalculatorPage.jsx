@@ -1,19 +1,20 @@
 import { useRef, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     calculateParkingFee,
     findTimeReachingFee,
     getNextFeeChangeTime,
 } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
-import {
-    clearScheduledNotifications,
-    requestNotificationPermission,
-    scheduleNotification,
-} from "../lib/notifications";
+import { saveActiveSession } from "../lib/sessionStorage";
+import { ImageOcrModal } from "../components/ImageOcrModal";
+import { notificationService } from "../lib/notificationService";
 
 export function FeeCalculatorPage() {
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [ruleName, setRuleName] = useState("");
     const [startTime, setStartTime] = useState("");
@@ -37,6 +38,8 @@ export function FeeCalculatorPage() {
             if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee);
         }
     }, [location.state]);
+    // Phase 3: 写真読取モーダル開閉
+    const [isOcrOpen, setIsOcrOpen] = useState(false);
 
     function handleSubmit(event) {
         event.preventDefault();
@@ -213,10 +216,63 @@ export function FeeCalculatorPage() {
         alert("料金ルールを削除しました。");
     }
 
+    // Phase 3: 写真読取結果の反映
+    function handleApplyOcr(data) {
+        if (data.ruleName) setRuleName(data.ruleName);
+        if (data.dayPrice) setDayPrice(data.dayPrice);
+        if (data.nightPrice) setNightPrice(data.nightPrice);
+        if (data.maximumFee !== undefined) setMaximumFee(data.maximumFee);
+    }
+
+    // Phase 4: 駐車計測開始（入庫）
+    function handleStartParking() {
+        const now = new Date();
+        const startIso = startTime
+            ? new Date(startTime).toISOString()
+            : now.toISOString();
+
+        const session = {
+            id: `session-${Date.now()}`,
+            ruleName: ruleName || "パーキング",
+            startTime: startIso,
+            endTime: endTime ? new Date(endTime).toISOString() : null,
+            dayPrice: Number(dayPrice),
+            nightPrice: Number(nightPrice),
+            maximumFee: Number(maximumFee),
+            budget: Number(budget),
+        };
+
+        saveActiveSession(session);
+
+        notificationService.notify(
+            {
+                title: "🚗 駐車を開始しました",
+                body: `${session.ruleName} のリアルタイム料金計測を開始しました。`,
+                type: "general",
+            },
+            { playSound: true }
+        );
+
+        navigate("/parking");
+    }
+
     return (
         <section>
-            <h2>料金計算</h2>
-            <p>時間帯ごとの料金を入力して、予想料金を確認します。</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                    <h2>料金計算</h2>
+                    <p style={{ margin: "4px 0 16px" }}>時間帯ごとの料金を入力して、予想料金を確認します。</p>
+                </div>
+                {/* Phase 3 写真読取ボタン */}
+                <button
+                    type="button"
+                    onClick={() => setIsOcrOpen(true)}
+                    className="btn-accent"
+                    style={{ background: "#0066cc" }}
+                >
+                    📷 料金表写真を読み取る (Phase 3)
+                </button>
+            </div>
 
             <section className="rule-card">
                 <h3>保存済み料金ルール</h3>
@@ -232,7 +288,7 @@ export function FeeCalculatorPage() {
                     ))}
                 </select>
 
-                <button type="button" onClick={handleDeleteRule}>
+                <button type="button" onClick={handleDeleteRule} className="btn-secondary">
                     選択中の料金ルールを削除する
                 </button>
             </section>
@@ -324,7 +380,7 @@ export function FeeCalculatorPage() {
 
                 <div className="button-group">
                     <button type="submit">料金を計算する</button>
-                    <button type="button" onClick={handleSaveRule}>
+                    <button type="button" onClick={handleSaveRule} className="btn-secondary">
                         この料金ルールを保存する
                     </button>
                 </div>
@@ -345,7 +401,9 @@ export function FeeCalculatorPage() {
                     <hr />
 
                     <p>通常料金：{result.regularFee.toLocaleString()}円</p>
-                    <p>予想料金：{result.totalFee.toLocaleString()}円</p>
+                    <p style={{ fontSize: "20px", fontWeight: "bold" }}>
+                        予想料金：{result.totalFee.toLocaleString()}円
+                    </p>
 
                     {result.maximumFeeApplied && (
                         <p className="notice-message">
@@ -372,6 +430,23 @@ export function FeeCalculatorPage() {
                             {result.maximumFeeReachedAt.toLocaleString("ja-JP")}
                         </p>
                     )}
+
+                    {/* Phase 4 駐車開始アクション */}
+                    <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #eee" }}>
+                        <button
+                            type="button"
+                            onClick={handleStartParking}
+                            style={{
+                                width: "100%",
+                                padding: "14px",
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                background: "#007a4d",
+                            }}
+                        >
+                            🚗 今すぐこの駐車場に入庫する（リアルタイム計測・通知開始）
+                        </button>
+                    </div>
                     <hr />
 
                     <h3>通知設定</h3>
@@ -391,6 +466,13 @@ export function FeeCalculatorPage() {
                     )}
                 </section>
             )}
+
+            {/* Phase 3 写真読取モーダル */}
+            <ImageOcrModal
+                isOpen={isOcrOpen}
+                onClose={() => setIsOcrOpen(false)}
+                onApplyRule={handleApplyOcr}
+            />
         </section>
     );
 }
