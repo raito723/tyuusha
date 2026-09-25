@@ -1,67 +1,60 @@
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
 import { STATUS_INFO } from "../lib/parkingSpots";
 
-// カスタムSVGピンの生成（Leafletの画像読み込み壊れを回避し、色分けに対応）
-function createPinIcon(color, label = "P") {
-    const svgHtml = `
-        <div style="
-            position: relative;
-            width: 32px;
-            height: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        ">
-            <svg viewBox="0 0 32 42" width="32" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                <path d="M16 0C7.164 0 0 7.164 0 16c0 10.667 16 26 16 26s16-15.333 16-26c0-8.836-7.164-16-16-16z" fill="${color}"/>
-                <circle cx="16" cy="16" r="10" fill="#ffffff"/>
-                <text x="16" y="20" font-size="11" font-weight="bold" fill="${color}" text-anchor="middle" font-family="sans-serif">${label}</text>
-            </svg>
-        </div>
-    `;
-    return L.divIcon({
-        className: "custom-leaflet-pin",
-        html: svgHtml,
-        iconSize: [32, 42],
-        iconAnchor: [16, 42],
-        popupAnchor: [0, -38],
+let googleMapsPromise;
+const DEFAULT_CENTER = [35.681236, 139.767125];
+
+function loadGoogleMaps(apiKey) {
+    if (window.google?.maps) return Promise.resolve(window.google.maps);
+    if (googleMapsPromise) return googleMapsPromise;
+
+    googleMapsPromise = new Promise((resolve, reject) => {
+        const callbackName = `initGoogleMaps${Date.now()}`;
+        window[callbackName] = () => {
+            resolve(window.google.maps);
+            delete window[callbackName];
+        };
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}&language=ja&region=JP`;
+        script.async = true;
+        script.onerror = () => {
+            googleMapsPromise = null;
+            delete window[callbackName];
+            reject(new Error("Google Mapsを読み込めませんでした。APIキーと有効なAPI設定をご確認ください。"));
+        };
+        document.head.appendChild(script);
     });
+
+    return googleMapsPromise;
 }
 
-// 現在地ピン用アイコン（青いパルスサークル付き）
-function createCurrentLocationIcon() {
-    const svgHtml = `
-        <div style="position: relative; width: 24px; height: 24px;">
-            <div style="
-                position: absolute;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                background: rgba(33, 150, 243, 0.4);
-                animation: pulse-ring 1.8s infinite;
-            "></div>
-            <div style="
-                position: absolute;
-                top: 4px;
-                left: 4px;
-                width: 16px;
-                height: 16px;
-                border-radius: 50%;
-                background: #1976d2;
-                border: 2px solid #ffffff;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-            "></div>
-        </div>
-    `;
-    return L.divIcon({
-        className: "current-loc-pin",
-        html: svgHtml,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [0, -12],
-    });
+function createInfoContent(spot, status, onSelectSpot) {
+    const root = document.createElement("div");
+    root.style.cssText = "font-family: sans-serif; font-size: 13px; line-height: 1.5; min-width: 180px; color: #415e8a";
+
+    const title = document.createElement("strong");
+    title.textContent = spot.name;
+    title.style.cssText = "display:block; margin-bottom:4px; font-size:14px";
+    root.append(title);
+
+    const statusLine = document.createElement("div");
+    statusLine.textContent = `${status.icon} ${status.label}（全${spot.capacity}台）`;
+    statusLine.style.cssText = `color:${status.color}; font-weight:bold; margin-bottom:6px`;
+    root.append(statusLine);
+
+    for (const text of [`昼間: ${spot.dayRateText}`, `最大: ${spot.maxRateText}`]) {
+        const line = document.createElement("div");
+        line.textContent = text;
+        root.append(line);
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "詳細を見る";
+    button.style.cssText = "width:100%; margin-top:8px; padding:8px; border:0; border-radius:15px; background:#00b893; color:white; cursor:pointer";
+    button.addEventListener("click", () => onSelectSpot(spot));
+    root.append(button);
+    return root;
 }
 
 export function ParkingMap({
@@ -69,152 +62,129 @@ export function ParkingMap({
     userLocation = null,
     selectedSpot = null,
     onSelectSpot = () => {},
-    center = [35.681236, 139.767125], // デフォルト東京駅
+    center = DEFAULT_CENTER,
     zoom = 15,
 }) {
     const mapContainerRef = useRef(null);
     const mapRef = useRef(null);
-    const markersLayerRef = useRef(null);
+    const markersRef = useRef([]);
     const userMarkerRef = useRef(null);
+    const infoWindowRef = useRef(null);
+    const onSelectSpotRef = useRef(onSelectSpot);
+    const [mapError, setMapError] = useState("");
+    const [mapReady, setMapReady] = useState(false);
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-    // 1. 地図の初期化
     useEffect(() => {
-        if (!mapContainerRef.current) return;
+        onSelectSpotRef.current = onSelectSpot;
+    }, [onSelectSpot]);
 
-        const initialCenter = userLocation
-            ? [userLocation.lat, userLocation.lng]
-            : center;
+    useEffect(() => {
+        if (!apiKey) {
+            setMapError("Google Mapsを表示するには .env.local に VITE_GOOGLE_MAPS_API_KEY を設定してください。");
+            return undefined;
+        }
 
-        const map = L.map(mapContainerRef.current, {
-            center: initialCenter,
-            zoom: zoom,
-            zoomControl: true,
-        });
-
-        // OpenStreetMap タイルレイヤー
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
-        }).addTo(map);
-
-        const markersLayer = L.layerGroup().addTo(map);
-        mapRef.current = map;
-        markersLayerRef.current = markersLayer;
+        let cancelled = false;
+        loadGoogleMaps(apiKey)
+            .then((maps) => {
+                if (cancelled || !mapContainerRef.current) return;
+                const initialCenter = userLocation
+                    ? { lat: userLocation.lat, lng: userLocation.lng }
+                    : { lat: center[0], lng: center[1] };
+                mapRef.current = new maps.Map(mapContainerRef.current, {
+                    center: initialCenter,
+                    zoom,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true,
+                });
+                infoWindowRef.current = new maps.InfoWindow();
+                setMapReady(true);
+                setMapError("");
+            })
+            .catch((error) => {
+                if (!cancelled) setMapError(error.message);
+            });
 
         return () => {
-            map.remove();
-            mapRef.current = null;
-        };
-    }, []);
-
-    // 2. 駐車場マーカーの描画
-    useEffect(() => {
-        if (!mapRef.current || !markersLayerRef.current) return;
-
-        markersLayerRef.current.clearLayers();
-
-        spots.forEach((spot) => {
-            const statusConfig = STATUS_INFO[spot.status] || STATUS_INFO.vacant;
-            const icon = createPinIcon(statusConfig.color, "P");
-
-            const marker = L.marker([spot.lat, spot.lng], { icon });
-
-            const popupContent = `
-                <div style="font-family: sans-serif; font-size: 13px; line-height: 1.4; min-width: 180px;">
-                    <div style="font-weight: bold; margin-bottom: 4px; font-size: 14px;">${spot.name}</div>
-                    <div style="color: ${statusConfig.color}; font-weight: bold; margin-bottom: 6px;">
-                        ${statusConfig.icon} ${statusConfig.label} (全${spot.capacity}台)
-                    </div>
-                    <div style="color: #444; font-size: 12px; margin-bottom: 2px;">昼間: ${spot.dayRateText}</div>
-                    <div style="color: #444; font-size: 12px; margin-bottom: 6px;">最大: ${spot.maxRateText}</div>
-                    ${spot.distance ? `<div style="font-size: 11px; color: #666; margin-bottom: 4px;">📍 現在地から約 ${spot.distance} km</div>` : ""}
-                    <button id="btn-select-${spot.id}" style="
-                        width: 100%;
-                        padding: 6px;
-                        background: #007a4d;
-                        color: #fff;
-                        border: 0;
-                        border-radius: 15px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        margin-top: 4px;
-                    ">詳細を見る</button>
-                </div>
-            `;
-
-            marker.bindPopup(popupContent);
-
-            marker.on("popupopen", () => {
-                const btn = document.getElementById(`btn-select-${spot.id}`);
-                if (btn) {
-                    btn.onclick = () => onSelectSpot(spot);
-                }
-            });
-
-            marker.on("click", () => {
-                onSelectSpot(spot);
-            });
-
-            marker.addTo(markersLayerRef.current);
-        });
-    }, [spots, onSelectSpot]);
-
-    // 3. 現在地マーカーの描画
-    useEffect(() => {
-        if (!mapRef.current) return;
-
-        if (userMarkerRef.current) {
-            userMarkerRef.current.remove();
+            cancelled = true;
+            markersRef.current.forEach((marker) => marker.setMap(null));
+            markersRef.current = [];
+            userMarkerRef.current?.setMap(null);
             userMarkerRef.current = null;
+            mapRef.current = null;
+            setMapReady(false);
+        };
+    }, [apiKey, center, zoom]);
+
+    useEffect(() => {
+        const maps = window.google?.maps;
+        if (!mapReady || !maps || !mapRef.current || !infoWindowRef.current) return;
+
+        markersRef.current.forEach((marker) => marker.setMap(null));
+        markersRef.current = spots.map((spot) => {
+            const status = STATUS_INFO[spot.status] || STATUS_INFO.vacant;
+            const marker = new maps.Marker({
+                map: mapRef.current,
+                position: { lat: spot.lat, lng: spot.lng },
+                title: spot.name,
+                label: { text: "P", color: "#ffffff", fontWeight: "bold" },
+                icon: {
+                    path: maps.SymbolPath.CIRCLE,
+                    fillColor: status.color,
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                    scale: 15,
+                },
+            });
+            marker.addListener("click", () => {
+                infoWindowRef.current.setContent(createInfoContent(spot, status, (item) => onSelectSpotRef.current(item)));
+                infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
+                onSelectSpotRef.current(spot);
+            });
+            return marker;
+        });
+    }, [mapReady, spots]);
+
+    useEffect(() => {
+        const maps = window.google?.maps;
+        if (!mapReady || !maps || !mapRef.current) return;
+        userMarkerRef.current?.setMap(null);
+        userMarkerRef.current = null;
+        if (userLocation) {
+            userMarkerRef.current = new maps.Marker({
+                map: mapRef.current,
+                position: { lat: userLocation.lat, lng: userLocation.lng },
+                title: "あなたの現在地",
+                zIndex: 1000,
+                icon: {
+                    path: maps.SymbolPath.CIRCLE,
+                    fillColor: "#415e8a",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 3,
+                    scale: 9,
+                },
+            });
         }
+    }, [mapReady, userLocation]);
 
-        if (userLocation && userLocation.lat && userLocation.lng) {
-            const userIcon = createCurrentLocationIcon();
-            const marker = L.marker([userLocation.lat, userLocation.lng], {
-                icon: userIcon,
-                zIndexOffset: 1000,
-            })
-                .bindPopup("<b>📍 あなたの現在地</b>")
-                .addTo(mapRef.current);
-
-            userMarkerRef.current = marker;
-        }
-    }, [userLocation]);
-
-    // 4. 選択された駐車場へのフォーカス
     useEffect(() => {
         if (!mapRef.current || !selectedSpot) return;
-
-        mapRef.current.setView([selectedSpot.lat, selectedSpot.lng], 16, {
-            animate: true,
-        });
+        mapRef.current.panTo({ lat: selectedSpot.lat, lng: selectedSpot.lng });
+        mapRef.current.setZoom(16);
     }, [selectedSpot]);
 
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <div
-                ref={mapContainerRef}
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    border: "1px solid #ddd",
-                }}
-            />
-            {/* パルスアニメーション用のスタイル */}
-            <style>{`
-                @keyframes pulse-ring {
-                    0% { transform: scale(0.6); opacity: 0.8; }
-                    50% { transform: scale(1.4); opacity: 0.2; }
-                    100% { transform: scale(0.6); opacity: 0.8; }
-                }
-                .leaflet-popup-content-wrapper {
-                    border-radius: 15px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                }
-            `}</style>
+            <div ref={mapContainerRef} style={{ width: "100%", height: "100%", borderRadius: "15px", overflow: "hidden", border: "1px solid #ccf1e9" }} />
+            {mapError && (
+                <div role="status" style={{ position: "absolute", inset: "0 0 auto", zIndex: 1, padding: "12px", background: "#fef2d2", color: "#415e8a", borderRadius: "15px", fontSize: "13px" }}>
+                    {mapError}
+                </div>
+            )}
         </div>
     );
 }
