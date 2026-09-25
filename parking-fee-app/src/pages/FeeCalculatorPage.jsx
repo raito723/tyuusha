@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
     calculateParkingFee,
     findTimeReachingFee,
@@ -12,6 +13,8 @@ import {
 } from "../lib/notifications";
 
 export function FeeCalculatorPage() {
+    const location = useLocation();
+
     const [ruleName, setRuleName] = useState("");
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
@@ -23,6 +26,17 @@ export function FeeCalculatorPage() {
     const [savedRules, setSavedRules] = useState(getParkingRules());
     const [notificationMessage, setNotificationMessage] = useState("");
     const notificationTimerIds = useRef([]);
+
+    // マップ画面等からプリセット情報が渡された場合の自動入力
+    useEffect(() => {
+        if (location.state?.presetRule) {
+            const rule = location.state.presetRule;
+            if (rule.name) setRuleName(rule.name);
+            if (rule.dayPrice !== undefined) setDayPrice(rule.dayPrice);
+            if (rule.nightPrice !== undefined) setNightPrice(rule.nightPrice);
+            if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee);
+        }
+    }, [location.state]);
 
     function handleSubmit(event) {
         event.preventDefault();
