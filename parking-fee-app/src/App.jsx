@@ -3,6 +3,7 @@ import { FeeCalculatorPage } from "./pages/FeeCalculatorPage";
 import { HomePage } from "./pages/HomePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { PhotoOcrPage } from "./pages/PhotoOcrPage";
+import { ParkingMapPage } from "./pages/ParkingMapPage";
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
             {" / "}
             <Link to="/ocr">料金表を読む</Link>
             {" / "}
+            <Link to="/map">駐車場マップ</Link>
+            {" / "}
             <Link to="/settings">設定</Link>
           </nav>
         </header>
@@ -26,6 +29,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/calculator" element={<FeeCalculatorPage />} />
           <Route path="/ocr" element={<PhotoOcrPage />} />
+          <Route path="/map" element={<ParkingMapPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
