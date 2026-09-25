@@ -110,3 +110,51 @@ button:hover {
   color: #7a4b00;
   font-weight: bold;
 }
+
+.photo-card,
+.ocr-next-step {
+  max-width: 640px;
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.photo-card input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-select-button {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background: #007a4d;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.file-select-button:hover {
+  background: #00623e;
+}
+
+.help-message {
+  color: #52606d;
+  font-size: 14px;
+}
+
+.image-preview {
+  margin-top: 24px;
+}
+
+.image-preview img {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  margin-bottom: 12px;
+  object-fit: contain;
+  border: 1px solid #d9e2ec;
+  border-radius: 6px;
+}

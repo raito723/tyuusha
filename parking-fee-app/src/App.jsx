@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import { FeeCalculatorPage } from "./pages/FeeCalculatorPage";
 import { HomePage } from "./pages/HomePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 
 function App() {
   return (
@@ -15,6 +16,8 @@ function App() {
             {" / "}
             <Link to="/calculator">料金計算</Link>
             {" / "}
+            <Link to="/ocr">料金表を読む</Link>
+            {" / "}
             <Link to="/settings">設定</Link>
           </nav>
         </header>
@@ -22,6 +25,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/calculator" element={<FeeCalculatorPage />} />
+          <Route path="/ocr" element={<PhotoOcrPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
