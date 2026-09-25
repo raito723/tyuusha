@@ -1,3 +1,13 @@
+:root {
+  --color-primary: #00b893;
+  --color-primary-soft: #ccf1e9;
+  --color-text: #415e8a;
+  --color-highlight: #fef2d2;
+  --color-highlight-deep: #b38545;
+  --color-surface-soft: #eef8f5;
+  --color-border: #ccf1e9;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,16 +15,16 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: #f5f7f8;
-  color: #1f2933;
-  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+  background: #fafaf9;
+  color: var(--color-text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Hiragino Sans",
     "Yu Gothic", sans-serif;
 }
 
 main {
   max-width: 720px;
   margin: 0 auto;
-  padding: 48px 24px;
+  padding: 48px 24px 160px;
 }
 
 h1 {
@@ -24,17 +34,27 @@ h1 {
 /*  */
 
 header {
-  margin-bottom: 32px;
+  position: fixed;
+  z-index: 10;
+  inset-inline: 0;
+  bottom: 0;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
 nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 12px;
 }
 
 nav a {
-  color: #0066cc;
+  color: var(--color-text);
 }
 
 form {
@@ -56,20 +76,20 @@ button {
 
 button {
   border: 0;
-  border-radius: 6px;
-  background: #007a4d;
+  border-radius: 8px;
+  background: var(--color-primary);
   color: #ffffff;
   cursor: pointer;
 }
 
 button:hover {
-  background: #00623e;
+  background: #008f72;
 }
 
 .result-card {
   margin-top: 24px;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 15px;
   background: #ffffff;
 }
 
@@ -79,7 +99,7 @@ button:hover {
 }
 
 .notice-message {
-  color: #00623e;
+  color: #008f72;
   font-weight: bold;
 }
 
@@ -89,8 +109,8 @@ button:hover {
   max-width: 440px;
   margin-bottom: 28px;
   padding: 20px;
-  border-radius: 8px;
-  background: #e9f6ef;
+  border-radius: 15px;
+  background: var(--color-primary-soft);
 }
 
 .rule-card h3 {
@@ -105,9 +125,9 @@ button:hover {
 
 .warning-message {
   padding: 12px;
-  border-radius: 6px;
-  background: #fff3cd;
-  color: #7a4b00;
+  border-radius: 15px;
+  background: var(--color-highlight);
+  color: #765a2d;
   font-weight: bold;
 }
 
@@ -116,7 +136,7 @@ button:hover {
   max-width: 640px;
   margin-top: 24px;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 15px;
   background: #ffffff;
 }
 
@@ -130,14 +150,14 @@ button:hover {
 .file-select-button {
   display: inline-block;
   padding: 10px 16px;
-  border-radius: 6px;
-  background: #007a4d;
+  border-radius: 15px;
+  background: var(--color-primary);
   color: #ffffff;
   cursor: pointer;
 }
 
 .file-select-button:hover {
-  background: #00623e;
+  background: #008f72;
 }
 
 .help-message {
@@ -155,8 +175,8 @@ button:hover {
   max-height: 480px;
   margin-bottom: 12px;
   object-fit: contain;
-  border: 1px solid #d9e2ec;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
 }
 
 /* ========================================================
@@ -178,8 +198,8 @@ button:hover {
 
 .search-filter-card {
   background: #ffffff;
-  border: 1px solid #d9e2ec;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -209,7 +229,7 @@ button:hover {
 .filter-group-label {
   font-size: 13px;
   font-weight: bold;
-  color: #486581;
+  color: var(--color-text);
 }
 
 .map-content-grid {
@@ -229,7 +249,7 @@ button:hover {
   height: 520px;
   position: sticky;
   top: 16px;
-  border-radius: 8px;
+  border-radius: 15px;
 }
 
 @media (max-width: 768px) {
@@ -246,9 +266,9 @@ button:hover {
 }
 
 .selected-spot-detail-card {
-  background: #f0fdf4;
-  border: 2px solid #007a4d;
-  border-radius: 8px;
+  background: var(--color-primary-soft);
+  border: 2px solid var(--color-primary);
+  border-radius: 15px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0, 122, 77, 0.12);
 }
@@ -269,7 +289,7 @@ button:hover {
 
 .detail-label {
   font-weight: bold;
-  color: #334e68;
+  color: var(--color-text);
   min-width: 68px;
 }
 
@@ -278,9 +298,9 @@ button:hover {
   align-items: center;
   gap: 3px;
   background: #ffffff;
-  border: 1px solid #bcccdc;
+  border: 1px solid var(--color-border);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 15px;
   font-size: 11px;
 }
 
@@ -295,22 +315,22 @@ button:hover {
 
 .spot-list-card {
   background: #ffffff;
-  border: 1px solid #d9e2ec;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
   padding: 14px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .spot-list-card:hover {
-  border-color: #007a4d;
+  border-color: #008f72;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .spot-list-card.selected {
-  border-color: #007a4d;
-  background: #f8fafc;
-  box-shadow: 0 0 0 2px #007a4d;
+  border-color: #008f72;
+  background: var(--color-surface-soft);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .status-badge {
@@ -318,7 +338,7 @@ button:hover {
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 15px;
   font-size: 11px;
   font-weight: bold;
 }
@@ -330,9 +350,9 @@ button:hover {
 }
 
 .status-crowded {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fcd34d;
+  background: var(--color-highlight);
+  color: #765a2d;
+  border: 1px solid var(--color-highlight-deep);
 }
 
 .status-full {
@@ -345,8 +365,8 @@ button:hover {
   text-align: center;
   padding: 32px 16px;
   background: #ffffff;
-  border: 1px dashed #bcccdc;
-  border-radius: 8px;
+  border: 1px dashed var(--color-highlight-deep);
+  border-radius: 15px;
   color: #627d98;
   font-size: 14px;
 }

@@ -135,7 +135,7 @@ export function ParkingMap({
                         background: #007a4d;
                         color: #fff;
                         border: 0;
-                        border-radius: 4px;
+                        border-radius: 15px;
                         font-weight: bold;
                         cursor: pointer;
                         margin-top: 4px;
@@ -211,7 +211,7 @@ export function ParkingMap({
                     100% { transform: scale(0.6); opacity: 0.8; }
                 }
                 .leaflet-popup-content-wrapper {
-                    border-radius: 8px;
+                    border-radius: 15px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 }
             `}</style>
