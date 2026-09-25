@@ -109,3 +109,28 @@ export function findTimeReachingFee({
 
     return null;
 }
+
+export function getNextFeeChangeTime({ startTime, endTime }) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return null;
+    }
+
+    const current = new Date(start);
+
+    while (current < end) {
+        const before = new Date(current);
+        current.setMinutes(current.getMinutes() + 1);
+
+        const wasDayTime = isTimeInRange(before.getHours(), 8, 20);
+        const isDayTime = isTimeInRange(current.getHours(), 8, 20);
+
+        if (wasDayTime !== isDayTime) {
+            return current;
+        }
+    }
+
+    return null;
+}
