@@ -36,7 +36,7 @@ header {
   z-index: 10;
   inset-inline: 0;
   bottom: 0;
-  padding: 0 18px calc(8px + env(safe-area-inset-bottom));
+  padding: 0 18px calc(16px + env(safe-area-inset-bottom));
   background: #ffffff;
   border-top: 1px solid #d8dfdd;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
@@ -253,14 +253,14 @@ nav.bottom-navigation {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end;
-  height: 108px;
+  height: 100px;
   gap: 8px;
   margin: 0;
 }
 
 .bottom-navigation-item {
   display: flex;
-  height: 76px;
+  height: 72px;
   min-width: 0;
   flex-direction: column;
   align-items: center;
@@ -289,6 +289,7 @@ nav.bottom-navigation {
 }
 
 .bottom-navigation-camera {
+  height: 100px;
   justify-content: flex-start;
   gap: 5px;
   padding-top: 0;
@@ -299,7 +300,7 @@ nav.bottom-navigation {
   width: 70px;
   height: 70px;
   place-items: center;
-  margin-top: -34px;
+  margin-top: -28px;
   border: 6px solid #ffffff;
   border-radius: 50%;
   background: var(--color-primary);
@@ -496,17 +497,70 @@ button:hover {
    Phase 5: 周辺駐車場の検索・マップスタイル
    ======================================================== */
 .map-page-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding-top: 30px;
 }
 
 .map-page-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-page-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 21px;
+  text-align: center;
+}
+
+.map-back-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.map-back-button:hover {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.map-page-header .location-action-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
+  justify-content: flex-end;
+}
+
+.map-page-header .location-action-bar button {
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--color-primary);
+  border-radius: 50%;
+  background: #ffffff;
+  color: transparent;
+  white-space: nowrap;
+}
+
+.map-page-header .location-action-bar button::after {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: auto;
+  border: 1px solid #222;
+  border-radius: 50%;
 }
 
 .search-filter-card {
@@ -520,10 +574,46 @@ button:hover {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.map-search-card {
+  position: absolute;
+  z-index: 4;
+  top: 78px;
+  right: 0;
+  left: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .search-input-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.map-search-card .search-input-row input,
+.map-search-card .map-sort-select {
+  height: 44px;
+  border: 1px solid var(--color-primary);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.map-search-card .filter-chips-row {
+  display: none;
+}
+
+.map-search-card .search-input-row input {
+  min-width: 0;
+  padding-inline: 18px;
+}
+
+.map-search-card .map-sort-select {
+  width: 104px;
+  min-width: 104px !important;
+  padding: 0 10px;
+  color: var(--color-text);
 }
 
 .filter-chips-row {
@@ -546,9 +636,10 @@ button:hover {
 }
 
 .map-content-grid {
+  position: relative;
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   align-items: start;
 }
 
@@ -559,17 +650,162 @@ button:hover {
 }
 
 .map-view-pane {
-  height: 520px;
-  position: sticky;
-  top: 16px;
-  border-radius: 15px;
+  height: 550px;
+  position: relative;
+  border-radius: 0;
 }
 
 @media (max-width: 768px) {
   .map-view-pane {
-    height: 340px;
+    height: 560px;
     position: static;
   }
+}
+
+.map-status-legend {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 62px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  min-height: 44px;
+  padding: 5px 20px;
+  border: 1px solid var(--color-primary);
+  border-radius: 22px;
+  background: #ffffff;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.map-status-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.legend-vacant {
+  background: #00b893;
+}
+
+.legend-crowded {
+  background: #f3c744;
+}
+
+.legend-full {
+  background: #ef5757;
+}
+
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid #d6e6e2;
+  border-radius: 15px;
+  background: #d8d8d8;
+}
+
+.map-fallback::before,
+.map-fallback::after {
+  content: "";
+  position: absolute;
+  background: #eeeeee;
+}
+
+.map-fallback::before {
+  width: 130%;
+  height: 34px;
+  top: 48%;
+  left: -14%;
+  transform: rotate(-18deg);
+}
+
+.map-fallback::after {
+  width: 30px;
+  height: 130%;
+  top: -14%;
+  left: 57%;
+  transform: rotate(20deg);
+}
+
+.map-fallback-road {
+  position: absolute;
+  z-index: 1;
+  border: 16px solid #eeeeee;
+  border-radius: 50%;
+}
+
+.map-fallback-road-one {
+  width: 280px;
+  height: 200px;
+  top: 4%;
+  right: -100px;
+}
+
+.map-fallback-road-two {
+  width: 320px;
+  height: 210px;
+  bottom: -70px;
+  left: -130px;
+}
+
+.map-fallback-marker {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-primary);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--color-text);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.map-fallback-marker span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.map-fallback-marker b {
+  position: absolute;
+  top: 58px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.map-fallback-marker-0 span {
+  background: #00b893;
+}
+
+.map-fallback-marker-1 span {
+  background: #f3c744;
+}
+
+.map-fallback-marker-2 span {
+  background: #ef5757;
+}
+
+.map-fallback-marker.selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 4px rgba(0, 184, 147, 0.18);
 }
 
 .map-list-pane {
