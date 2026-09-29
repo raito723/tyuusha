@@ -1,45 +1,34 @@
 import { useEffect, useRef, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { STATUS_INFO } from "../lib/parkingSpots";
 
-let googleMapsPromise;
-const DEFAULT_CENTER = [35.681236, 139.767125];
+const DEFAULT_CENTER = [139.767125, 35.681236];
 
-function loadGoogleMaps(apiKey) {
-    if (window.google?.maps) return Promise.resolve(window.google.maps);
-    if (googleMapsPromise) return googleMapsPromise;
-
-    googleMapsPromise = new Promise((resolve, reject) => {
-        const callbackName = `initGoogleMaps${Date.now()}`;
-        window[callbackName] = () => {
-            resolve(window.google.maps);
-            delete window[callbackName];
-        };
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}&language=ja&region=JP`;
-        script.async = true;
-        script.onerror = () => {
-            googleMapsPromise = null;
-            delete window[callbackName];
-            reject(new Error("Google Mapsを読み込めませんでした。APIキーと有効なAPI設定をご確認ください。"));
-        };
-        document.head.appendChild(script);
-    });
-
-    return googleMapsPromise;
+function createMarkerElement(status, selected) {
+    const marker = document.createElement("div");
+    marker.className = `parking-map-marker${selected ? " is-selected" : ""}`;
+    marker.style.setProperty("--marker-color", status.color);
+    marker.setAttribute("aria-label", "駐車場の位置");
+    const label = document.createElement("span");
+    label.textContent = "P";
+    label.style.transform = "rotate(45deg)";
+    marker.append(label);
+    return marker;
 }
 
-function createInfoContent(spot, status, onSelectSpot) {
+function createPopupContent(spot, status, onSelectSpot) {
     const root = document.createElement("div");
-    root.style.cssText = "font-family: sans-serif; font-size: 13px; line-height: 1.5; min-width: 180px; color: #415e8a";
+    root.className = "parking-map-popup";
 
     const title = document.createElement("strong");
     title.textContent = spot.name;
-    title.style.cssText = "display:block; margin-bottom:4px; font-size:14px";
     root.append(title);
 
     const statusLine = document.createElement("div");
+    statusLine.className = "parking-map-popup-status";
+    statusLine.style.color = status.color;
     statusLine.textContent = `${status.icon} ${status.label}（全${spot.capacity}台）`;
-    statusLine.style.cssText = `color:${status.color}; font-weight:bold; margin-bottom:6px`;
     root.append(statusLine);
 
     for (const text of [`昼間: ${spot.dayRateText}`, `最大: ${spot.maxRateText}`]) {
@@ -50,8 +39,8 @@ function createInfoContent(spot, status, onSelectSpot) {
 
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "parking-map-popup-button";
     button.textContent = "詳細を見る";
-    button.style.cssText = "width:100%; margin-top:8px; padding:8px; border:0; border-radius:15px; background:#00b893; color:white; cursor:pointer";
     button.addEventListener("click", () => onSelectSpot(spot));
     root.append(button);
     return root;
@@ -61,7 +50,7 @@ export function ParkingMap({
     spots = [],
     userLocation = null,
     selectedSpot = null,
-    onSelectSpot = () => { },
+    onSelectSpot = () => {},
     center = DEFAULT_CENTER,
     zoom = 15,
 }) {
@@ -69,135 +58,110 @@ export function ParkingMap({
     const mapRef = useRef(null);
     const markersRef = useRef([]);
     const userMarkerRef = useRef(null);
-    const infoWindowRef = useRef(null);
     const onSelectSpotRef = useRef(onSelectSpot);
     const [mapError, setMapError] = useState("");
-    const [mapReady, setMapReady] = useState(false);
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
     useEffect(() => {
         onSelectSpotRef.current = onSelectSpot;
     }, [onSelectSpot]);
 
     useEffect(() => {
-        if (!apiKey) {
-            setMapError("Google Mapsを表示するには .env.local に VITE_GOOGLE_MAPS_API_KEY を設定してください。");
+        if (!accessToken) {
+            setMapError("Mapboxを表示するには .env.local に VITE_MAPBOX_ACCESS_TOKEN を設定してください。");
             return undefined;
         }
 
-        let cancelled = false;
-        loadGoogleMaps(apiKey)
-            .then((maps) => {
-                if (cancelled || !mapContainerRef.current) return;
-                const initialCenter = userLocation
-                    ? { lat: userLocation.lat, lng: userLocation.lng }
-                    : { lat: center[0], lng: center[1] };
-                mapRef.current = new maps.Map(mapContainerRef.current, {
-                    center: initialCenter,
-                    zoom,
-                    mapTypeControl: false,
-                    streetViewControl: false,
-                    fullscreenControl: true,
-                });
-                infoWindowRef.current = new maps.InfoWindow();
-                setMapReady(true);
-                setMapError("");
-            })
-            .catch((error) => {
-                if (!cancelled) setMapError(error.message);
-            });
+        mapboxgl.accessToken = accessToken;
+        const initialCenter = userLocation
+            ? [userLocation.lng, userLocation.lat]
+            : center;
+        const map = new mapboxgl.Map({
+            container: mapContainerRef.current,
+            style: "mapbox://styles/mapbox/streets-v12",
+            center: initialCenter,
+            zoom,
+            language: "ja",
+        });
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+        map.addControl(new mapboxgl.ScaleControl({ maxWidth: 100, unit: "metric" }));
+        mapRef.current = map;
+
+        const handleError = (event) => {
+            if (event.error) setMapError("Mapboxの地図を読み込めませんでした。アクセストークンと利用設定をご確認ください。");
+        };
+        map.on("error", handleError);
+        map.once("load", () => setMapError(""));
 
         return () => {
-            cancelled = true;
-            markersRef.current.forEach((marker) => marker.setMap(null));
+            markersRef.current.forEach(({ marker, popup }) => {
+                marker.remove();
+                popup.remove();
+            });
             markersRef.current = [];
-            userMarkerRef.current?.setMap(null);
+            userMarkerRef.current?.remove();
             userMarkerRef.current = null;
+            map.remove();
             mapRef.current = null;
-            setMapReady(false);
         };
-    }, [apiKey, center, zoom]);
+    }, [accessToken, center, zoom]);
 
     useEffect(() => {
-        const maps = window.google?.maps;
-        if (!mapReady || !maps || !mapRef.current || !infoWindowRef.current) return;
+        const map = mapRef.current;
+        if (!map) return;
 
-        markersRef.current.forEach((marker) => marker.setMap(null));
+        markersRef.current.forEach(({ marker, popup }) => {
+            marker.remove();
+            popup.remove();
+        });
         markersRef.current = spots.map((spot) => {
             const status = STATUS_INFO[spot.status] || STATUS_INFO.vacant;
-            const marker = new maps.Marker({
-                map: mapRef.current,
-                position: { lat: spot.lat, lng: spot.lng },
-                title: spot.name,
-                label: { text: "P", color: "#ffffff", fontWeight: "bold" },
-                icon: {
-                    path: maps.SymbolPath.CIRCLE,
-                    fillColor: status.color,
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 2,
-                    scale: 15,
-                },
-            });
-            marker.addListener("click", () => {
-                infoWindowRef.current.setContent(createInfoContent(spot, status, (item) => onSelectSpotRef.current(item)));
-                infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
-                onSelectSpotRef.current(spot);
-            });
-            return marker;
+            const popup = new mapboxgl.Popup({ offset: 20, closeButton: true })
+                .setDOMContent(createPopupContent(spot, status, (item) => onSelectSpotRef.current(item)));
+            const marker = new mapboxgl.Marker({
+                element: createMarkerElement(status, selectedSpot?.id === spot.id),
+                anchor: "bottom",
+            })
+                .setLngLat([spot.lng, spot.lat])
+                .setPopup(popup)
+                .addTo(map);
+            marker.getElement().addEventListener("click", () => onSelectSpotRef.current(spot));
+            markersRef.current.push({ marker, popup, spot });
+            return { marker, popup, spot };
         });
-    }, [mapReady, spots]);
+    }, [spots]);
 
     useEffect(() => {
-        const maps = window.google?.maps;
-        if (!mapReady || !maps || !mapRef.current) return;
-        userMarkerRef.current?.setMap(null);
+        userMarkerRef.current?.remove();
         userMarkerRef.current = null;
-        if (userLocation) {
-            userMarkerRef.current = new maps.Marker({
-                map: mapRef.current,
-                position: { lat: userLocation.lat, lng: userLocation.lng },
-                title: "あなたの現在地",
-                zIndex: 1000,
-                icon: {
-                    path: maps.SymbolPath.CIRCLE,
-                    fillColor: "#415e8a",
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 3,
-                    scale: 9,
-                },
-            });
-        }
-    }, [mapReady, userLocation]);
+        if (!userLocation || !mapRef.current) return;
+        mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 15 });
+        const element = document.createElement("div");
+        element.className = "parking-map-user-marker";
+        element.setAttribute("aria-label", "あなたの現在地");
+        userMarkerRef.current = new mapboxgl.Marker({ element, anchor: "center" })
+            .setLngLat([userLocation.lng, userLocation.lat])
+            .addTo(mapRef.current);
+    }, [userLocation]);
 
     useEffect(() => {
-        if (!mapRef.current || !selectedSpot) return;
-        mapRef.current.panTo({ lat: selectedSpot.lat, lng: selectedSpot.lng });
-        mapRef.current.setZoom(16);
+        const map = mapRef.current;
+        if (!map || !selectedSpot) return;
+        map.easeTo({ center: [selectedSpot.lng, selectedSpot.lat], zoom: 16, duration: 500 });
+        const selectedMarker = markersRef.current.find(({ spot }) => spot.id === selectedSpot.id);
+        selectedMarker?.popup.addTo(map);
+    }, [selectedSpot]);
+
+    useEffect(() => {
+        markersRef.current.forEach(({ marker, spot }) => {
+            marker.getElement().classList.toggle("is-selected", selectedSpot?.id === spot.id);
+        });
     }, [selectedSpot]);
 
     return (
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <div ref={mapContainerRef} style={{ width: "100%", height: "100%", borderRadius: "15px", overflow: "hidden", border: "1px solid #ccf1e9" }} />
-            {mapError && (
-                <div className="map-fallback" role="status">
-                    <div className="map-fallback-road map-fallback-road-one" />
-                    <div className="map-fallback-road map-fallback-road-two" />
-                    {spots.map((spot, index) => (
-                        <button
-                            key={spot.id}
-                            type="button"
-                            className={`map-fallback-marker map-fallback-marker-${index % 3} ${selectedSpot?.id === spot.id ? "selected" : ""}`}
-                            style={{ top: `${26 + (index * 19) % 58}%`, left: `${18 + (index * 23) % 70}%` }}
-                            onClick={() => onSelectSpot(spot)}
-                        >
-                            <span />
-                            <b>選択</b>
-                        </button>
-                    ))}
-                </div>
-            )}
+        <div className="parking-map-shell">
+            <div ref={mapContainerRef} className="parking-map-canvas" />
+            {mapError && <div className="parking-map-error" role="status">{mapError}</div>}
         </div>
     );
 }

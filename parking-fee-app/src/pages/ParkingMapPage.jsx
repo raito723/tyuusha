@@ -21,6 +21,7 @@ export function ParkingMapPage() {
     // 現在地取得関連
     const [userLocation, setUserLocation] = useState(null);
     const [locationLoading, setLocationLoading] = useState(false);
+    const [locationError, setLocationError] = useState("");
 
     // 検索・フィルター条件
     const [keyword, setKeyword] = useState("");
@@ -40,10 +41,12 @@ export function ParkingMapPage() {
     // 現在地取得ハンドラ
     const handleRequestLocation = () => {
         if (!navigator.geolocation) {
+            setLocationError("お使いのブラウザは位置情報取得に対応していません。");
             return;
         }
 
         setLocationLoading(true);
+        setLocationError("");
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -53,7 +56,16 @@ export function ParkingMapPage() {
                 });
                 setLocationLoading(false);
             },
-            () => {
+            (error) => {
+                let msg = "位置情報の取得に失敗しました。";
+                if (error.code === error.PERMISSION_DENIED) {
+                    msg = "位置情報の利用が許可されていません（ブラウザの設定をご確認ください）。標準位置（東京駅周辺）で表示しています。";
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    msg = "現在地を特定できませんでした。";
+                } else if (error.code === error.TIMEOUT) {
+                    msg = "位置情報の取得がタイムアウトしました。";
+                }
+                setLocationError(msg);
                 setLocationLoading(false);
                 // デフォルトとして東京駅に設定
                 setUserLocation({ lat: 35.681236, lng: 139.767125 });
@@ -101,10 +113,12 @@ export function ParkingMapPage() {
     return (
         <section className="map-page-container">
             <div className="map-page-header">
-                <button type="button" className="map-back-button" onClick={() => navigate(-1)} aria-label="前の画面に戻る">
-                    ‹
-                </button>
-                <h2>駐車場マップ</h2>
+                <div>
+                    <h2>🗺️ 周辺駐車場の検索・マップ</h2>
+                    <p style={{ margin: "4px 0 0", color: "#666", fontSize: "14px" }}>
+                        現在地や目的地の周辺にある駐車場を探し、空き状況・料金・支払い方法を確認できます。
+                    </p>
+                </div>
 
                 <div className="location-action-bar">
                     <button
@@ -119,18 +133,24 @@ export function ParkingMapPage() {
                 </div>
             </div>
 
+            {/* 位置情報メッセージ */}
+            {locationError && (
+                <div className="error-message" style={{ margin: "12px 0", fontSize: "13px" }}>
+                    ⚠️ {locationError}
+                </div>
+            )}
+
             {/* 検索・絞り込みバー */}
-            <div className="search-filter-card map-search-card">
+            <div className="search-filter-card">
                 <div className="search-input-row">
                     <input
                         type="text"
-                        placeholder="駐車場を検索"
+                        placeholder="🔍 駐車場名・住所で検索..."
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
                         style={{ flex: "1 1 200px" }}
                     />
                     <select
-                        className="map-sort-select"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
                         style={{ minWidth: "150px" }}
@@ -209,12 +229,6 @@ export function ParkingMapPage() {
                         selectedSpot={selectedSpot}
                         onSelectSpot={(spot) => setSelectedSpot(spot)}
                     />
-                </div>
-
-                <div className="map-status-legend" aria-label="空き状況の凡例">
-                    <span><i className="legend-dot legend-vacant" />空車</span>
-                    <span><i className="legend-dot legend-crowded" />混雑</span>
-                    <span><i className="legend-dot legend-full" />満車</span>
                 </div>
 
                 {/* リスト＆詳細エリア */}
