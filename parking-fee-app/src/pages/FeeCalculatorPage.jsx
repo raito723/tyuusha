@@ -8,7 +8,6 @@ import {
 } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
 import { saveActiveSession } from "../lib/sessionStorage";
-import { ImageOcrModal } from "../components/ImageOcrModal";
 import { notificationService } from "../lib/notificationService";
 
 export function FeeCalculatorPage() {
@@ -18,7 +17,13 @@ export function FeeCalculatorPage() {
     const [ruleName, setRuleName] = useState("");
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
+    const [dayStartTime, setDayStartTime] = useState("08:00");
+    const [dayEndTime, setDayEndTime] = useState("20:00");
+    const [dayIntervalMinutes, setDayIntervalMinutes] = useState(30);
     const [dayPrice, setDayPrice] = useState(200);
+    const [nightStartTime, setNightStartTime] = useState("20:00");
+    const [nightEndTime, setNightEndTime] = useState("08:00");
+    const [nightIntervalMinutes, setNightIntervalMinutes] = useState(60);
     const [nightPrice, setNightPrice] = useState(100);
     const [maximumFee, setMaximumFee] = useState(1000);
     const [budget, setBudget] = useState(0);
@@ -29,16 +34,22 @@ export function FeeCalculatorPage() {
 
     // マップ画面等からプリセット情報が渡された場合の自動入力
     useEffect(() => {
+        if (location.state?.startTime) setStartTime(location.state.startTime);
+        if (location.state?.endTime) setEndTime(location.state.endTime);
         if (location.state?.presetRule) {
             const rule = location.state.presetRule;
             if (rule.name) setRuleName(rule.name);
+            if (rule.dayStartTime) setDayStartTime(rule.dayStartTime);
+            if (rule.dayEndTime) setDayEndTime(rule.dayEndTime);
+            if (rule.dayIntervalMinutes) setDayIntervalMinutes(rule.dayIntervalMinutes);
             if (rule.dayPrice !== undefined) setDayPrice(rule.dayPrice);
+            if (rule.nightStartTime) setNightStartTime(rule.nightStartTime);
+            if (rule.nightEndTime) setNightEndTime(rule.nightEndTime);
+            if (rule.nightIntervalMinutes) setNightIntervalMinutes(rule.nightIntervalMinutes);
             if (rule.nightPrice !== undefined) setNightPrice(rule.nightPrice);
             if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee);
         }
     }, [location.state]);
-    // Phase 3: 写真読取モーダル開閉
-    const [isOcrOpen, setIsOcrOpen] = useState(false);
 
     function handleSubmit(event) {
         event.preventDefault();
@@ -46,7 +57,13 @@ export function FeeCalculatorPage() {
         const feeSettings = {
             startTime,
             endTime,
+            dayStartTime,
+            dayEndTime,
+            dayIntervalMinutes: Number(dayIntervalMinutes),
             dayPrice: Number(dayPrice),
+            nightStartTime,
+            nightEndTime,
+            nightIntervalMinutes: Number(nightIntervalMinutes),
             nightPrice: Number(nightPrice),
             maximumFee: Number(maximumFee),
         };
@@ -76,6 +93,10 @@ export function FeeCalculatorPage() {
             nextFeeChangeAt: getNextFeeChangeTime({
                 startTime,
                 endTime,
+                dayStartTime,
+                dayEndTime,
+                nightStartTime,
+                nightEndTime,
             }),
         });
     }
@@ -159,7 +180,13 @@ export function FeeCalculatorPage() {
         const newRule = {
             id: crypto.randomUUID(),
             name: ruleName.trim(),
+            dayStartTime,
+            dayEndTime,
+            dayIntervalMinutes: Number(dayIntervalMinutes),
             dayPrice: Number(dayPrice),
+            nightStartTime,
+            nightEndTime,
+            nightIntervalMinutes: Number(nightIntervalMinutes),
             nightPrice: Number(nightPrice),
             maximumFee: Number(maximumFee),
         };
@@ -183,7 +210,13 @@ export function FeeCalculatorPage() {
         }
 
         setRuleName(selectedRule.name);
+        setDayStartTime(selectedRule.dayStartTime || "08:00");
+        setDayEndTime(selectedRule.dayEndTime || "20:00");
+        setDayIntervalMinutes(selectedRule.dayIntervalMinutes || 30);
         setDayPrice(selectedRule.dayPrice);
+        setNightStartTime(selectedRule.nightStartTime || "20:00");
+        setNightEndTime(selectedRule.nightEndTime || "08:00");
+        setNightIntervalMinutes(selectedRule.nightIntervalMinutes || 60);
         setNightPrice(selectedRule.nightPrice);
         setMaximumFee(selectedRule.maximumFee);
     }
@@ -215,14 +248,6 @@ export function FeeCalculatorPage() {
         alert("料金ルールを削除しました。");
     }
 
-    // Phase 3: 写真読取結果の反映
-    function handleApplyOcr(data) {
-        if (data.ruleName) setRuleName(data.ruleName);
-        if (data.dayPrice) setDayPrice(data.dayPrice);
-        if (data.nightPrice) setNightPrice(data.nightPrice);
-        if (data.maximumFee !== undefined) setMaximumFee(data.maximumFee);
-    }
-
     // Phase 4: 駐車計測開始（入庫）
     function handleStartParking() {
         const now = new Date();
@@ -235,7 +260,13 @@ export function FeeCalculatorPage() {
             ruleName: ruleName || "パーキング",
             startTime: startIso,
             endTime: endTime ? new Date(endTime).toISOString() : null,
+            dayStartTime,
+            dayEndTime,
+            dayIntervalMinutes: Number(dayIntervalMinutes),
             dayPrice: Number(dayPrice),
+            nightStartTime,
+            nightEndTime,
+            nightIntervalMinutes: Number(nightIntervalMinutes),
             nightPrice: Number(nightPrice),
             maximumFee: Number(maximumFee),
             budget: Number(budget),
@@ -265,11 +296,11 @@ export function FeeCalculatorPage() {
                 {/* Phase 3 写真読取ボタン */}
                 <button
                     type="button"
-                    onClick={() => setIsOcrOpen(true)}
+                    onClick={() => navigate("/ocr")}
                     className="btn-accent"
                     style={{ background: "#0066cc" }}
                 >
-                    📷 料金表写真を読み取る (Phase 3)
+                    📷 料金表写真を読み取る
                 </button>
             </div>
 
@@ -327,9 +358,22 @@ export function FeeCalculatorPage() {
                 </div>
 
                 <div>
-                    <label htmlFor="dayPrice">
-                        昼料金：30分あたりの料金（8:00〜20:00）
-                    </label>
+                    <label htmlFor="dayStartTime">昼料金の開始時刻</label>
+                    <input id="dayStartTime" type="time" value={dayStartTime} onChange={(event) => setDayStartTime(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="dayEndTime">昼料金の終了時刻</label>
+                    <input id="dayEndTime" type="time" value={dayEndTime} onChange={(event) => setDayEndTime(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="dayIntervalMinutes">昼料金の単位時間（分）</label>
+                    <input id="dayIntervalMinutes" type="number" min="1" value={dayIntervalMinutes} onChange={(event) => setDayIntervalMinutes(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="dayPrice">昼料金（円）</label>
                     <input
                         id="dayPrice"
                         type="number"
@@ -341,9 +385,22 @@ export function FeeCalculatorPage() {
                 </div>
 
                 <div>
-                    <label htmlFor="nightPrice">
-                        夜料金：60分あたりの料金（20:00〜翌8:00）
-                    </label>
+                    <label htmlFor="nightStartTime">夜料金の開始時刻</label>
+                    <input id="nightStartTime" type="time" value={nightStartTime} onChange={(event) => setNightStartTime(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="nightEndTime">夜料金の終了時刻</label>
+                    <input id="nightEndTime" type="time" value={nightEndTime} onChange={(event) => setNightEndTime(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="nightIntervalMinutes">夜料金の単位時間（分）</label>
+                    <input id="nightIntervalMinutes" type="number" min="1" value={nightIntervalMinutes} onChange={(event) => setNightIntervalMinutes(event.target.value)} required />
+                </div>
+
+                <div>
+                    <label htmlFor="nightPrice">夜料金（円）</label>
                     <input
                         id="nightPrice"
                         type="number"
@@ -391,11 +448,19 @@ export function FeeCalculatorPage() {
                 <section className="result-card">
                     <h3>計算結果</h3>
 
-                    <p>昼間の駐車時間：{result.dayMinutes}分</p>
-                    <p>昼料金：{result.dayFee.toLocaleString()}円</p>
+                    {result.dayMinutes > 0 && (
+                        <>
+                            <p>昼間の駐車時間：{result.dayMinutes}分</p>
+                            <p>昼料金：{result.dayFee.toLocaleString()}円</p>
+                        </>
+                    )}
 
-                    <p>夜間の駐車時間：{result.nightMinutes}分</p>
-                    <p>夜料金：{result.nightFee.toLocaleString()}円</p>
+                    {result.nightMinutes > 0 && (
+                        <>
+                            <p>夜間の駐車時間：{result.nightMinutes}分</p>
+                            <p>夜料金：{result.nightFee.toLocaleString()}円</p>
+                        </>
+                    )}
 
                     <hr />
 
@@ -466,12 +531,6 @@ export function FeeCalculatorPage() {
                 </section>
             )}
 
-            {/* Phase 3 写真読取モーダル */}
-            <ImageOcrModal
-                isOpen={isOcrOpen}
-                onClose={() => setIsOcrOpen(false)}
-                onApplyRule={handleApplyOcr}
-            />
         </section>
     );
 }

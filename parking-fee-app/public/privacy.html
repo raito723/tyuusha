@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>プライバシーについて | 駐車料金計算アプリ</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+            color: #415e8a;
+            background: #fafaf9;
+        }
+
+        body {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 32px 20px 64px;
+            line-height: 1.8;
+        }
+
+        h1 {
+            font-size: 26px;
+        }
+
+        h2 {
+            margin-top: 32px;
+            font-size: 18px;
+        }
+
+        section {
+            padding-bottom: 20px;
+            border-bottom: 1px solid #d9e4e1;
+        }
+
+        a {
+            color: #008f72;
+        }
+
+        .notice {
+            padding: 14px;
+            border-left: 4px solid #00b893;
+            background: #eef8f5;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>プライバシーについて</h1>
+        <p>本ページでは、駐車料金計算アプリにおける料金表写真の解析と情報の取り扱いを説明します。</p>
+
+        <section>
+            <h2>取得する情報と利用目的</h2>
+            <p>利用者が選択した料金表画像を文字認識し、駐車場名、料金時間帯、単位時間、料金、最大料金を読み取るために利用します。認識後の料金情報は、利用者が内容を確認・修正した後、料金計算と保存済みルールのために利用します。
+            </p>
+        </section>
+
+        <section>
+            <h2>OCR処理と外部送信</h2>
+            <p>画像の文字認識は、サーバーにインストールされたオープンソースのTesseract.jsと日本語学習データを用いて行います。画像およびOCR文字列を外部のOCR/AIサービスへ送信しません。</p>
+        </section>
+
+        <section>
+            <h2>保存期間と削除</h2>
+            <p>画像はAPIサーバーのメモリ上で処理し、サーバーのディスクやストレージには保存しません。OCR文字列もサーバーには保存しません。画面上の画像プレビューは画面を離れるか「写真を削除」を押した時に破棄されます。
+            </p>
+            <p>利用者が確認して保存した料金ルールは、利用中のブラウザーのローカルストレージに保存されます。料金計算画面の「選択中の料金ルールを削除する」から個別に削除できます。ブラウザーのサイトデータを消去すると、保存済みルールも削除されます。
+            </p>
+        </section>
+
+        <section>
+            <h2>安全管理</h2>
+            <p>画像はPNG・JPEG・WebP、10MB以下に制限し、API呼び出し回数にも制限を設けています。本番環境ではHTTPSを使用してください。</p>
+        </section>
+
+        <section>
+            <h2>位置情報</h2>
+            <p>周辺駐車場機能で位置情報を利用する場合は、ブラウザーの許可を得て現在地周辺を表示するために使用します。このアプリのサーバーには位置情報を保存しません。</p>
+        </section>
+
+        <section>
+            <h2>運営者・お問い合わせ</h2>
+            <p>運営者名および問い合わせ先は、アプリの公開・配布主体が公開前に記載してください。</p>
+        </section>
+
+        <p class="notice">画像を解析する前に、料金表に個人情報など不要な情報が写っていないことをご確認ください。</p>
+    </main>
+</body>
+
+</html>
