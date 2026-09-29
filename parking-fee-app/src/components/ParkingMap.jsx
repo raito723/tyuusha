@@ -160,6 +160,7 @@ export function ParkingMap({
             markersRef.current.push({ marker, popup, spot });
             return { marker, popup, spot };
         });
+
     }, [spots]);
 
     useEffect(() => {
