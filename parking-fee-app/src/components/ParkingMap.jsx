@@ -17,6 +17,24 @@ function createMarkerElement(status, selected) {
     return marker;
 }
 
+function createUserMarkerElement() {
+    const element = document.createElement("div");
+    element.className = "parking-map-user-marker";
+    element.setAttribute("aria-label", "あなたの現在地");
+    return element;
+}
+
+function updateUserLocation(map, location, markerRef) {
+    markerRef.current?.remove();
+    markerRef.current = null;
+    if (!location) return;
+
+    map.flyTo({ center: [location.lng, location.lat], zoom: 15 });
+    markerRef.current = new mapboxgl.Marker({ element: createUserMarkerElement(), anchor: "center" })
+        .setLngLat([location.lng, location.lat])
+        .addTo(map);
+}
+
 function createPopupContent(spot, status, onSelectSpot) {
     const root = document.createElement("div");
     root.className = "parking-map-popup";
@@ -28,10 +46,15 @@ function createPopupContent(spot, status, onSelectSpot) {
     const statusLine = document.createElement("div");
     statusLine.className = "parking-map-popup-status";
     statusLine.style.color = status.color;
-    statusLine.textContent = `${status.icon} ${status.label}（全${spot.capacity}台）`;
+    statusLine.textContent = spot.capacity == null
+        ? `${status.icon} ${status.label}`
+        : `${status.icon} ${status.label}（全${spot.capacity}台）`;
     root.append(statusLine);
 
-    for (const text of [`昼間: ${spot.dayRateText}`, `最大: ${spot.maxRateText}`]) {
+    const rateLines = spot.dayRateText && spot.maxRateText
+        ? [`昼間: ${spot.dayRateText}`, `最大: ${spot.maxRateText}`]
+        : ["料金・空き状況の情報はありません"];
+    for (const text of rateLines) {
         const line = document.createElement("div");
         line.textContent = text;
         root.append(line);
@@ -58,9 +81,12 @@ export function ParkingMap({
     const mapRef = useRef(null);
     const markersRef = useRef([]);
     const userMarkerRef = useRef(null);
+    const userLocationRef = useRef(userLocation);
+    const mapLoadedRef = useRef(false);
     const onSelectSpotRef = useRef(onSelectSpot);
     const [mapError, setMapError] = useState("");
     const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    userLocationRef.current = userLocation;
 
     useEffect(() => {
         onSelectSpotRef.current = onSelectSpot;
@@ -91,7 +117,11 @@ export function ParkingMap({
             if (event.error) setMapError("Mapboxの地図を読み込めませんでした。アクセストークンと利用設定をご確認ください。");
         };
         map.on("error", handleError);
-        map.once("load", () => setMapError(""));
+        map.once("load", () => {
+            mapLoadedRef.current = true;
+            setMapError("");
+            updateUserLocation(map, userLocationRef.current, userMarkerRef);
+        });
 
         return () => {
             markersRef.current.forEach(({ marker, popup }) => {
@@ -101,6 +131,7 @@ export function ParkingMap({
             markersRef.current = [];
             userMarkerRef.current?.remove();
             userMarkerRef.current = null;
+            mapLoadedRef.current = false;
             map.remove();
             mapRef.current = null;
         };
@@ -115,7 +146,7 @@ export function ParkingMap({
             popup.remove();
         });
         markersRef.current = spots.map((spot) => {
-            const status = STATUS_INFO[spot.status] || STATUS_INFO.vacant;
+            const status = STATUS_INFO[spot.status] || STATUS_INFO.unknown;
             const popup = new mapboxgl.Popup({ offset: 20, closeButton: true })
                 .setDOMContent(createPopupContent(spot, status, (item) => onSelectSpotRef.current(item)));
             const marker = new mapboxgl.Marker({
@@ -132,16 +163,8 @@ export function ParkingMap({
     }, [spots]);
 
     useEffect(() => {
-        userMarkerRef.current?.remove();
-        userMarkerRef.current = null;
-        if (!userLocation || !mapRef.current) return;
-        mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 15 });
-        const element = document.createElement("div");
-        element.className = "parking-map-user-marker";
-        element.setAttribute("aria-label", "あなたの現在地");
-        userMarkerRef.current = new mapboxgl.Marker({ element, anchor: "center" })
-            .setLngLat([userLocation.lng, userLocation.lat])
-            .addTo(mapRef.current);
+        if (!mapRef.current || !mapLoadedRef.current) return;
+        updateUserLocation(mapRef.current, userLocation, userMarkerRef);
     }, [userLocation]);
 
     useEffect(() => {

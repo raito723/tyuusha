@@ -12,6 +12,8 @@ VITE_MAPBOX_ACCESS_TOKEN=取得した公開用アクセストークン
 
 トークンが未設定または無効の場合も駐車場一覧や絞り込みは使えますが、地図は表示されません。
 
+「この周辺の駐車場を検索」は Mapbox Search Box API の駐車場カテゴリを使い、現在地（位置情報が使えない場合は東京駅周辺）から5km以内を検索します。APIから取得できる駐車場名・位置と、サンプルデータの料金情報は混ぜずに表示します。料金・空き状況は別のデータ提供元がないため、検索結果では未提供として扱います。
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
