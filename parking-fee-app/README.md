@@ -1,16 +1,18 @@
 # React + Vite
 
-## Google Maps の設定
+## Mapbox の設定
 
-駐車場マップは Google Maps JavaScript API を使います。Google Cloud で Maps JavaScript API を有効にした API キーを用意し、プロジェクトのルートに `.env.local` を作成して次の値を設定してください。
+駐車場マップは Mapbox GL JS を使います。Mapbox アカウントで公開用アクセストークンを作成し、プロジェクトのルートに `.env.local` を作成して次の値を設定してください。
 
 ```env
-VITE_GOOGLE_MAPS_API_KEY=取得したAPIキー
+VITE_MAPBOX_ACCESS_TOKEN=取得した公開用アクセストークン
 ```
 
-`.env.example` を設定例として使えます。API キーには利用するサイトの HTTP リファラー制限を設定してください。設定後、開発サーバーを再起動します。
+アクセストークンには利用するサイトの URL 制限を設定してください。設定後、開発サーバーを再起動します。
 
-キーが未設定の場合も駐車場一覧や絞り込みは使えますが、地図は表示されません。
+トークンが未設定または無効の場合も駐車場一覧や絞り込みは使えますが、地図は表示されません。
+
+「この周辺の駐車場を検索」は Mapbox Search Box API の駐車場カテゴリを使い、現在地（位置情報が使えない場合は東京駅周辺）から5km以内を検索します。APIから取得できる駐車場名・位置と、サンプルデータの料金情報は混ぜずに表示します。料金・空き状況は別のデータ提供元がないため、検索結果では未提供として扱います。
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

@@ -144,6 +144,7 @@ export const STATUS_INFO = {
     vacant: { label: "空車", badgeClass: "status-vacant", color: "#2e7d32", icon: "🟢" },
     crowded: { label: "混雑", badgeClass: "status-crowded", color: "#ed6c02", icon: "🟡" },
     full: { label: "満車", badgeClass: "status-full", color: "#d32f2f", icon: "🔴" },
+    unknown: { label: "空き情報なし", badgeClass: "status-unknown", color: "#607d8b", icon: "🅿️" },
 };
 
 // お気に入り一覧（IDの配列）の取得
