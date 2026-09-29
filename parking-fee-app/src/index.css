@@ -531,11 +531,475 @@ button:hover {
   background: #ffffff;
 }
 
+.photo-ocr-page {
+  width: min(100%, 640px);
+  margin: 0 auto;
+  padding-top: 18px;
+}
+
+.ocr-privacy-note {
+  margin: 16px 0 0;
+  padding: 12px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface-soft);
+  color: #52606d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ocr-review-form {
+  display: grid;
+  width: 100%;
+  max-width: 640px;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.ocr-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ocr-review-heading h3,
+.ocr-review-heading p {
+  margin: 0;
+}
+
+.ocr-review-heading p {
+  margin-top: 4px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.ocr-missing-count {
+  flex: 0 0 auto;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.ocr-reading-warning {
+  margin: 0;
+  padding: 12px;
+  border-left: 3px solid #d92d20;
+  border-radius: 4px;
+  background: #fff6f5;
+  color: #8f2118;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ocr-review-group {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.ocr-review-group legend {
+  padding: 0 6px;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.ocr-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ocr-review-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ocr-review-field>span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.ocr-review-field b {
+  color: #b42318;
+  font-size: 11px;
+}
+
+.ocr-review-field input {
+  width: 100%;
+  min-width: 0;
+  background: #ffffff;
+}
+
+.ocr-review-field.is-missing input {
+  border: 2px solid #d92d20;
+  background: #fff6f5;
+}
+
+.ocr-raw-text {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f4f7f6;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.ocr-raw-text summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ocr-raw-text pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ocr-save-button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.ocr-live-estimate {
+  padding: 16px;
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+}
+
+.ocr-live-estimate h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.ocr-live-estimate p {
+  margin: 6px 0;
+}
+
+.ocr-live-estimate>strong {
+  display: block;
+  margin-top: 12px;
+  color: #008f72;
+  font-size: 24px;
+}
+
+.ocr-calculation-result {
+  max-width: 640px;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-primary);
+}
+
+.ocr-total-fee {
+  margin: 16px 0;
+  color: #008f72;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.ocr-result-page,
+.parking-time-page {
+  display: flex;
+  width: 100%;
+  min-height: calc(100dvh - 170px);
+  flex-direction: column;
+  margin: 0 auto;
+  padding: 18px 16px 20px;
+  background: #ffffff;
+}
+
+.ocr-step-header {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  min-height: 42px;
+  color: var(--color-text);
+}
+
+.ocr-step-header h2 {
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+.ocr-step-close {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.ocr-step-close:hover {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.ocr-result-content {
+  width: 100%;
+  max-width: 520px;
+  margin: auto;
+  padding: 42px 0 28px;
+  text-align: center;
+}
+
+.ocr-result-content>h3 {
+  margin: 0 0 22px;
+  color: var(--color-text);
+  font-size: 17px;
+}
+
+.ocr-rate-list {
+  overflow: hidden;
+  padding: 0 8px;
+  border: 2px solid #c9f0e7;
+  border-radius: 16px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.ocr-rate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #cbd8d5;
+  color: var(--color-text);
+}
+
+.ocr-rate-row:last-child {
+  border-bottom: 0;
+}
+
+.ocr-rate-row>div {
+  display: grid;
+  gap: 3px;
+}
+
+.ocr-rate-row b,
+.ocr-rate-row strong {
+  font-size: 16px;
+}
+
+.ocr-rate-row small {
+  color: #71817e;
+  font-size: 11px;
+}
+
+.ocr-rate-row>span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ocr-edit-link {
+  margin: 12px auto 0;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.ocr-edit-link:hover {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.ocr-rate-editor {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.ocr-primary-action {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 20px;
+  border-radius: 13px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ocr-primary-action:hover {
+  background: #008f72;
+}
+
+.parking-time-content {
+  display: grid;
+  width: 100%;
+  max-width: 520px;
+  gap: 24px;
+  margin: 22px auto 0;
+}
+
+.parking-time-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  min-height: 54px;
+  border: 1px solid var(--color-primary);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.parking-time-segmented button {
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.parking-time-segmented button.selected,
+.parking-time-segmented button.selected:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.parking-time-inputs {
+  display: grid;
+  gap: 22px;
+}
+
+.parking-time-inputs label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.parking-time-inputs input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 2px solid #c9f0e7;
+  border-radius: 13px;
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.parking-duration-summary {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border: 2px solid #c9f0e7;
+  border-radius: 14px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.parking-duration-summary strong {
+  font-size: 19px;
+}
+
+.parking-time-page .ocr-live-estimate {
+  margin-top: -8px;
+}
+
+.parking-time-page form {
+  width: 100%;
+  max-width: none;
+}
+
+.parking-time-page .ocr-primary-action {
+  margin-top: 0;
+}
+
+.parking-time-page .ocr-calculation-result {
+  margin: -8px 0 0;
+}
+
+@media (max-width: 520px) {
+  .ocr-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ocr-review-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .photo-card input[type="file"] {
   position: absolute;
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+
+.live-camera-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.live-camera-preview {
+  display: block;
+  width: 100%;
+  max-height: min(62vh, 560px);
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  background: #15221f;
+  object-fit: cover;
+}
+
+.live-camera-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #15221f;
+}
+
+.live-camera-frame .live-camera-preview {
+  border-radius: 0;
+}
+
+.live-camera-guide {
+  position: absolute;
+  top: 20%;
+  left: 7%;
+  width: 86%;
+  height: 60%;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+.camera-error-message {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff6e5;
+  color: #765a2d;
+  font-size: 14px;
+}
+
+.camera-error-message p {
+  margin: 0;
 }
 
 .file-select-button {

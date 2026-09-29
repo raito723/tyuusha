@@ -1,9 +1,22 @@
-function isTimeInRange(hour, startHour, endHour) {
-    if (startHour < endHour) {
-        return hour >= startHour && hour < endHour;
+function parseTimeToMinutes(value, fallback) {
+    if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
+        return fallback;
     }
 
-    return hour >= startHour || hour < endHour;
+    const [hour, minute] = value.split(":").map(Number);
+    return hour < 24 && minute < 60 ? hour * 60 + minute : fallback;
+}
+
+function isTimeInRange(time, start, end) {
+    if (start < end) return time >= start && time < end;
+    return time >= start || time < end;
+}
+
+function getRatePeriod(date, dayStart, dayEnd, nightStart, nightEnd) {
+    const time = date.getHours() * 60 + date.getMinutes();
+    if (isTimeInRange(time, dayStart, dayEnd)) return "day";
+    if (isTimeInRange(time, nightStart, nightEnd)) return "night";
+    return "night";
 }
 
 export function calculateParkingFee({
@@ -12,6 +25,12 @@ export function calculateParkingFee({
     dayPrice,
     nightPrice,
     maximumFee,
+    dayStartTime = "08:00",
+    dayEndTime = "20:00",
+    dayIntervalMinutes = 30,
+    nightStartTime = "20:00",
+    nightEndTime = "08:00",
+    nightIntervalMinutes = 60,
 }) {
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -26,15 +45,22 @@ export function calculateParkingFee({
         };
     }
 
+    if (dayIntervalMinutes <= 0 || nightIntervalMinutes <= 0) {
+        return { error: "単位時間は1分以上を入力してください。" };
+    }
+
+    const dayStart = parseTimeToMinutes(dayStartTime, 8 * 60);
+    const dayEnd = parseTimeToMinutes(dayEndTime, 20 * 60);
+    const nightStart = parseTimeToMinutes(nightStartTime, dayEnd);
+    const nightEnd = parseTimeToMinutes(nightEndTime, dayStart);
+
     let dayMinutes = 0;
     let nightMinutes = 0;
 
     const current = new Date(start);
 
     while (current < end) {
-        const hour = current.getHours();
-
-        if (isTimeInRange(hour, 8, 20)) {
+        if (getRatePeriod(current, dayStart, dayEnd, nightStart, nightEnd) === "day") {
             dayMinutes += 1;
         } else {
             nightMinutes += 1;
@@ -43,8 +69,8 @@ export function calculateParkingFee({
         current.setMinutes(current.getMinutes() + 1);
     }
 
-    const dayUnits = Math.ceil(dayMinutes / 30);
-    const nightUnits = Math.ceil(nightMinutes / 60);
+    const dayUnits = Math.ceil(dayMinutes / dayIntervalMinutes);
+    const nightUnits = Math.ceil(nightMinutes / nightIntervalMinutes);
 
     const dayFee = dayUnits * dayPrice;
     const nightFee = nightUnits * nightPrice;
@@ -66,14 +92,8 @@ export function calculateParkingFee({
     };
 }
 // 料金が指定額に達する最初の時刻を探す処理
-export function findTimeReachingFee({
-    startTime,
-    endTime,
-    dayPrice,
-    nightPrice,
-    maximumFee,
-    targetFee,
-}) {
+export function findTimeReachingFee(options) {
+    const { startTime, endTime, targetFee } = options;
     if (!targetFee || targetFee <= 0) {
         return null;
     }
@@ -94,13 +114,7 @@ export function findTimeReachingFee({
     while (current < end) {
         current.setMinutes(current.getMinutes() + 1);
 
-        const result = calculateParkingFee({
-            startTime: start,
-            endTime: current,
-            dayPrice,
-            nightPrice,
-            maximumFee,
-        });
+        const result = calculateParkingFee({ ...options, startTime: start, endTime: current });
 
         if (!result.error && result.totalFee >= targetFee) {
             return current;
@@ -110,7 +124,14 @@ export function findTimeReachingFee({
     return null;
 }
 
-export function getNextFeeChangeTime({ startTime, endTime }) {
+export function getNextFeeChangeTime({
+    startTime,
+    endTime,
+    dayStartTime = "08:00",
+    dayEndTime = "20:00",
+    nightStartTime = "20:00",
+    nightEndTime = "08:00",
+}) {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
@@ -118,14 +139,18 @@ export function getNextFeeChangeTime({ startTime, endTime }) {
         return null;
     }
 
+    const dayStart = parseTimeToMinutes(dayStartTime, 8 * 60);
+    const dayEnd = parseTimeToMinutes(dayEndTime, 20 * 60);
+    const nightStart = parseTimeToMinutes(nightStartTime, dayEnd);
+    const nightEnd = parseTimeToMinutes(nightEndTime, dayStart);
     const current = new Date(start);
 
     while (current < end) {
         const before = new Date(current);
         current.setMinutes(current.getMinutes() + 1);
 
-        const wasDayTime = isTimeInRange(before.getHours(), 8, 20);
-        const isDayTime = isTimeInRange(current.getHours(), 8, 20);
+        const wasDayTime = getRatePeriod(before, dayStart, dayEnd, nightStart, nightEnd) === "day";
+        const isDayTime = getRatePeriod(current, dayStart, dayEnd, nightStart, nightEnd) === "day";
 
         if (wasDayTime !== isDayTime) {
             return current;

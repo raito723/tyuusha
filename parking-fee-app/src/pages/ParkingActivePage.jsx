@@ -7,6 +7,7 @@ import {
 import {
     calculateParkingFee,
     findTimeReachingFee,
+    getNextFeeChangeTime,
 } from "../lib/feeCalculator";
 import { notificationService } from "../lib/notificationService";
 
@@ -76,9 +77,18 @@ export function ParkingActivePage() {
     const elapsedHours = Math.floor(diffMs / (1000 * 60 * 60));
     const elapsedMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const elapsedSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    const sessionFeeSettings = {
+        dayStartTime: session.dayStartTime || "08:00",
+        dayEndTime: session.dayEndTime || "20:00",
+        dayIntervalMinutes: session.dayIntervalMinutes || 30,
+        nightStartTime: session.nightStartTime || "20:00",
+        nightEndTime: session.nightEndTime || "08:00",
+        nightIntervalMinutes: session.nightIntervalMinutes || 60,
+    };
 
     // 現在時点の料金計算
     const currentCalc = calculateParkingFee({
+        ...sessionFeeSettings,
         startTime: session.startTime,
         endTime: currentTime > start ? currentTime : new Date(start.getTime() + 60000),
         dayPrice: session.dayPrice,
@@ -90,6 +100,7 @@ export function ParkingActivePage() {
 
     // 予定時刻・到達予定時刻の計算
     const budgetReachedAt = findTimeReachingFee({
+        ...sessionFeeSettings,
         startTime: session.startTime,
         endTime: new Date(start.getTime() + 24 * 60 * 60 * 1000),
         dayPrice: session.dayPrice,
@@ -99,6 +110,7 @@ export function ParkingActivePage() {
     });
 
     const maximumFeeReachedAt = findTimeReachingFee({
+        ...sessionFeeSettings,
         startTime: session.startTime,
         endTime: new Date(start.getTime() + 24 * 60 * 60 * 1000),
         dayPrice: session.dayPrice,
@@ -107,20 +119,14 @@ export function ParkingActivePage() {
         targetFee: Number(session.maximumFee),
     });
 
-    // 次の切り替え時刻（20:00 または 08:00）
-    const nextRateChange = new Date(currentTime);
-    const hour = currentTime.getHours();
-    if (hour >= 8 && hour < 20) {
-        nextRateChange.setHours(20, 0, 0, 0); // 今日の20:00
-    } else {
-        if (hour >= 20) {
-            nextRateChange.setDate(nextRateChange.getDate() + 1);
-        }
-        nextRateChange.setHours(8, 0, 0, 0); // 翌朝の8:00
-    }
-    const minutesToRateChange = Math.round(
-        (nextRateChange.getTime() - currentTime.getTime()) / (1000 * 60)
-    );
+    const nextRateChange = getNextFeeChangeTime({
+        startTime: currentTime,
+        endTime: new Date(currentTime.getTime() + 24 * 60 * 60 * 1000),
+        ...sessionFeeSettings,
+    });
+    const minutesToRateChange = nextRateChange
+        ? Math.max(0, Math.round((nextRateChange.getTime() - currentTime.getTime()) / (1000 * 60)))
+        : 0;
 
     // 出庫処理
     const handleEndParking = () => {
