@@ -291,59 +291,32 @@ nav.bottom-navigation {
   width: 100%;
   height: 100%;
   transform-origin: center;
-  transition: transform 180ms ease;
+  transition: transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .bottom-navigation-item:nth-child(1):hover .bottom-navigation-icon svg,
 .bottom-navigation-item:nth-child(1).active .bottom-navigation-icon svg {
-  animation: home-icon-pop 420ms ease both;
+  transform: rotate(-5deg) scale(1.14);
+}
+
+.bottom-navigation-item:nth-child(1) .bottom-navigation-icon svg,
+.bottom-navigation-item:nth-child(2) .bottom-navigation-icon svg {
+  transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bottom-navigation-item:nth-child(2):hover .bottom-navigation-icon svg,
 .bottom-navigation-item:nth-child(2).active .bottom-navigation-icon svg {
-  animation: location-icon-bounce 520ms ease both;
+  transform: translateY(-4px) scale(1.12);
 }
 
 .bottom-navigation-item:nth-child(4):hover .bottom-navigation-icon svg,
 .bottom-navigation-item:nth-child(4).active .bottom-navigation-icon svg {
-  animation: bookmark-icon-tilt 420ms ease both;
+  transform: rotate(-7deg) scale(1.05);
 }
 
 .bottom-navigation-item:nth-child(5):hover .bottom-navigation-icon svg,
 .bottom-navigation-item:nth-child(5).active .bottom-navigation-icon svg {
-  animation: setting-icon-turn 520ms ease both;
-}
-
-@keyframes home-icon-pop {
-  50% {
-    transform: translateY(-3px) scale(1.12);
-  }
-}
-
-@keyframes location-icon-bounce {
-  35% {
-    transform: translateY(-4px);
-  }
-
-  65% {
-    transform: translateY(1px);
-  }
-}
-
-@keyframes bookmark-icon-tilt {
-  35% {
-    transform: rotate(-9deg);
-  }
-
-  70% {
-    transform: rotate(6deg);
-  }
-}
-
-@keyframes setting-icon-turn {
-  to {
-    transform: rotate(45deg);
-  }
+  transform: rotate(45deg);
 }
 
 .bottom-navigation-camera {
@@ -354,6 +327,7 @@ nav.bottom-navigation {
 }
 
 .bottom-navigation-camera-button {
+  position: relative;
   display: grid;
   width: 70px;
   height: 70px;
@@ -366,6 +340,16 @@ nav.bottom-navigation {
   transition: transform 160ms ease, background 160ms ease;
 }
 
+.bottom-navigation-camera-button::after {
+  position: absolute;
+  inset: -5px;
+  border: 2px solid rgba(0, 184, 147, 0.45);
+  border-radius: 50%;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
 .bottom-navigation-camera-button svg {
   display: block;
   width: 26px;
@@ -375,17 +359,43 @@ nav.bottom-navigation {
 .bottom-navigation-camera:hover .bottom-navigation-camera-button,
 .bottom-navigation-camera.active .bottom-navigation-camera-button {
   background: #008f72;
-  transform: translateY(-2px);
-
+  animation: camera-button-pulse 620ms cubic-bezier(0.2, 0.8, 0.25, 1) 1;
 }
 
-.bottom-navigation-camera-button svg {
-  transition: transform 180ms ease;
+.bottom-navigation-camera:hover .bottom-navigation-camera-button::after,
+.bottom-navigation-camera.active .bottom-navigation-camera-button::after {
+  animation: camera-ring 620ms ease-out 1;
 }
 
-.bottom-navigation-camera:hover .bottom-navigation-camera-button svg,
-.bottom-navigation-camera.active .bottom-navigation-camera-button svg {
-  transform: scale(1.08) rotate(-5deg);
+.bottom-navigation-camera:active .bottom-navigation-camera-button {
+  animation: none;
+  transform: scale(1.2);
+}
+
+@keyframes camera-button-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 3px 10px rgba(0, 123, 101, 0.2);
+    transform: scale(1);
+  }
+
+  45% {
+    box-shadow: 0 5px 18px rgba(0, 123, 101, 0.38);
+    transform: scale(1.1);
+  }
+}
+
+@keyframes camera-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -393,7 +403,7 @@ nav.bottom-navigation {
   .bottom-navigation-item,
   .bottom-navigation-icon svg,
   .bottom-navigation-camera-button,
-  .bottom-navigation-camera-button svg {
+  .bottom-navigation-camera-button::after {
     animation: none !important;
     transition: none !important;
   }
