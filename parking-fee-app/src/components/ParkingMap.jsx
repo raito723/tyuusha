@@ -61,7 +61,7 @@ export function ParkingMap({
     spots = [],
     userLocation = null,
     selectedSpot = null,
-    onSelectSpot = () => {},
+    onSelectSpot = () => { },
     center = DEFAULT_CENTER,
     zoom = 15,
 }) {
@@ -181,8 +181,21 @@ export function ParkingMap({
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
             <div ref={mapContainerRef} style={{ width: "100%", height: "100%", borderRadius: "15px", overflow: "hidden", border: "1px solid #ccf1e9" }} />
             {mapError && (
-                <div role="status" style={{ position: "absolute", inset: "0 0 auto", zIndex: 1, padding: "12px", background: "#fef2d2", color: "#415e8a", borderRadius: "15px", fontSize: "13px" }}>
-                    {mapError}
+                <div className="map-fallback" role="status">
+                    <div className="map-fallback-road map-fallback-road-one" />
+                    <div className="map-fallback-road map-fallback-road-two" />
+                    {spots.map((spot, index) => (
+                        <button
+                            key={spot.id}
+                            type="button"
+                            className={`map-fallback-marker map-fallback-marker-${index % 3} ${selectedSpot?.id === spot.id ? "selected" : ""}`}
+                            style={{ top: `${26 + (index * 19) % 58}%`, left: `${18 + (index * 23) % 70}%` }}
+                            onClick={() => onSelectSpot(spot)}
+                        >
+                            <span />
+                            <b>選択</b>
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
