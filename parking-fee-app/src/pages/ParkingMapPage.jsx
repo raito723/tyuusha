@@ -8,7 +8,10 @@ import {
     getFavoriteSpotIds,
     toggleFavoriteSpot,
 } from "../lib/parkingSpots";
+import { searchNearbyParking } from "../lib/mapboxParkingSearch";
 import { ParkingMap } from "../components/ParkingMap";
+
+const DEFAULT_SEARCH_CENTER = { lat: 35.681236, lng: 139.767125 };
 
 export function ParkingMapPage() {
     const navigate = useNavigate();
@@ -17,10 +20,15 @@ export function ParkingMapPage() {
     const [spots] = useState(DEFAULT_PARKING_SPOTS);
     const [favoriteIds, setFavoriteIds] = useState(getFavoriteSpotIds());
     const [selectedSpot, setSelectedSpot] = useState(null);
+    const [mapboxSpots, setMapboxSpots] = useState(null);
+    const [mapboxAttribution, setMapboxAttribution] = useState("");
+    const [parkingSearchLoading, setParkingSearchLoading] = useState(false);
+    const [parkingSearchError, setParkingSearchError] = useState("");
 
     // 現在地取得関連
     const [userLocation, setUserLocation] = useState(null);
     const [locationLoading, setLocationLoading] = useState(false);
+    const [locationError, setLocationError] = useState("");
 
     // 検索・フィルター条件
     const [keyword, setKeyword] = useState("");
@@ -40,10 +48,12 @@ export function ParkingMapPage() {
     // 現在地取得ハンドラ
     const handleRequestLocation = () => {
         if (!navigator.geolocation) {
+            setLocationError("お使いのブラウザは位置情報取得に対応していません。");
             return;
         }
 
         setLocationLoading(true);
+        setLocationError("");
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -53,7 +63,16 @@ export function ParkingMapPage() {
                 });
                 setLocationLoading(false);
             },
-            () => {
+            (error) => {
+                let msg = "位置情報の取得に失敗しました。";
+                if (error.code === error.PERMISSION_DENIED) {
+                    msg = "位置情報の利用が許可されていません（ブラウザの設定をご確認ください）。標準位置（東京駅周辺）で表示しています。";
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    msg = "現在地を特定できませんでした。";
+                } else if (error.code === error.TIMEOUT) {
+                    msg = "位置情報の取得がタイムアウトしました。";
+                }
+                setLocationError(msg);
                 setLocationLoading(false);
                 // デフォルトとして東京駅に設定
                 setUserLocation({ lat: 35.681236, lng: 139.767125 });
@@ -64,6 +83,27 @@ export function ParkingMapPage() {
                 maximumAge: 60000,
             }
         );
+    };
+
+    const handleSearchNearbyParking = async () => {
+        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+        const center = userLocation || DEFAULT_SEARCH_CENTER;
+        setParkingSearchLoading(true);
+        setParkingSearchError("");
+        setSelectedSpot(null);
+
+        try {
+            const result = await searchNearbyParking(center, token);
+            setMapboxSpots(result.spots);
+            setMapboxAttribution(result.attribution);
+            setSortBy("distance");
+        } catch (error) {
+            setMapboxSpots([]);
+            setMapboxAttribution("");
+            setParkingSearchError(error.message || "駐車場を検索できませんでした。");
+        } finally {
+            setParkingSearchLoading(false);
+        }
     };
 
     // お気に入り切り替え
@@ -88,23 +128,35 @@ export function ParkingMapPage() {
     };
 
     // フィルタリング・ソート済みリスト
-    const filteredSpots = filterAndSortSpots(spots, {
-        keyword,
-        paymentFilter,
-        statusFilter,
-        onlyFavorites,
-        favoriteIds,
-        userLocation,
-        sortBy,
-    });
+    const filteredSpots = mapboxSpots === null
+        ? filterAndSortSpots(spots, {
+            keyword,
+            paymentFilter,
+            statusFilter,
+            onlyFavorites,
+            favoriteIds,
+            userLocation,
+            sortBy,
+        })
+        : mapboxSpots
+            .filter((spot) => {
+                const query = keyword.trim().toLocaleLowerCase();
+                const matchesKeyword = !query
+                    || spot.name.toLocaleLowerCase().includes(query)
+                    || spot.address.toLocaleLowerCase().includes(query);
+                return matchesKeyword && (!onlyFavorites || favoriteIds.includes(spot.id));
+            })
+            .sort((a, b) => sortBy === "distance" ? a.distance - b.distance : 0);
 
     return (
         <section className="map-page-container">
             <div className="map-page-header">
-                <button type="button" className="map-back-button" onClick={() => navigate(-1)} aria-label="前の画面に戻る">
-                    ‹
-                </button>
-                <h2>駐車場マップ</h2>
+                <div>
+                    <h2>🗺️ 周辺駐車場の検索・マップ</h2>
+                    <p style={{ margin: "4px 0 0", color: "#666", fontSize: "14px" }}>
+                        現在地や目的地の周辺にある駐車場を探し、空き状況・料金・支払い方法を確認できます。
+                    </p>
+                </div>
 
                 <div className="location-action-bar">
                     <button
@@ -119,29 +171,65 @@ export function ParkingMapPage() {
                 </div>
             </div>
 
+            {/* 位置情報メッセージ */}
+            {locationError && (
+                <div className="error-message" style={{ margin: "12px 0", fontSize: "13px" }}>
+                    ⚠️ {locationError}
+                </div>
+            )}
+
             {/* 検索・絞り込みバー */}
-            <div className="search-filter-card map-search-card">
+            <div className="search-filter-card">
+                <div className="nearby-parking-search-row">
+                    <button
+                        type="button"
+                        onClick={handleSearchNearbyParking}
+                        disabled={parkingSearchLoading}
+                        className="nearby-parking-search-button"
+                    >
+                        {parkingSearchLoading ? "検索中..." : "📍 この周辺の駐車場を検索（5km）"}
+                    </button>
+                    {mapboxSpots !== null && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMapboxSpots(null);
+                                setMapboxAttribution("");
+                                setParkingSearchError("");
+                                setSelectedSpot(null);
+                            }}
+                            className="btn-secondary"
+                        >
+                            サンプル一覧に戻る
+                        </button>
+                    )}
+                </div>
+                {parkingSearchError && <div className="error-message" role="alert">{parkingSearchError}</div>}
+                {mapboxSpots !== null && (
+                    <p className="parking-search-note">
+                        Mapboxの周辺検索結果を表示中です。料金・空き状況は検索結果に含まれないため、詳細は駐車場でご確認ください。
+                    </p>
+                )}
                 <div className="search-input-row">
                     <input
                         type="text"
-                        placeholder="駐車場を検索"
+                        placeholder="🔍 駐車場名・住所で検索..."
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
                         style={{ flex: "1 1 200px" }}
                     />
                     <select
-                        className="map-sort-select"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
                         style={{ minWidth: "150px" }}
                     >
                         <option value="distance">📍 距離が近い順</option>
-                        <option value="dayPrice">💰 昼間料金が安い順</option>
-                        <option value="maxFee">🏷️ 最大料金が安い順</option>
+                        {mapboxSpots === null && <option value="dayPrice">💰 昼間料金が安い順</option>}
+                        {mapboxSpots === null && <option value="maxFee">🏷️ 最大料金が安い順</option>}
                     </select>
                 </div>
 
-                <div className="filter-chips-row">
+                {mapboxSpots === null && <div className="filter-chips-row">
                     {/* 支払い方法フィルター */}
                     <div className="filter-group">
                         <span className="filter-group-label">支払い:</span>
@@ -186,18 +274,23 @@ export function ParkingMapPage() {
                     >
                         {onlyFavorites ? "★ お気に入りのみ表示中" : "☆ お気に入りのみ"}
                     </button>
-                </div>
+                </div>}
             </div>
 
             {/* 結果カウント */}
             <div style={{ margin: "12px 0 8px", fontSize: "13px", color: "#666", display: "flex", justifyContent: "space-between" }}>
                 <span>該当件数: <b>{filteredSpots.length}</b> 件</span>
-                {userLocation && (
+                {mapboxSpots !== null ? (
+                    <span style={{ color: "#007a4d" }}>✓ Mapboxで周辺駐車場を検索済み</span>
+                ) : userLocation && (
                     <span style={{ color: "#007a4d" }}>
                         ✓ 現在地周辺の駐車場を表示中
                     </span>
                 )}
             </div>
+            {mapboxSpots !== null && mapboxAttribution && (
+                <p className="mapbox-attribution">{mapboxAttribution}</p>
+            )}
 
             {/* メインレイアウト（マップ ＋ リスト） */}
             <div className="map-content-grid">
@@ -211,12 +304,6 @@ export function ParkingMapPage() {
                     />
                 </div>
 
-                <div className="map-status-legend" aria-label="空き状況の凡例">
-                    <span><i className="legend-dot legend-vacant" />空車</span>
-                    <span><i className="legend-dot legend-crowded" />混雑</span>
-                    <span><i className="legend-dot legend-full" />満車</span>
-                </div>
-
                 {/* リスト＆詳細エリア */}
                 <div className="map-list-pane">
                     {/* 詳細表示カード（駐車場が選択されている時） */}
@@ -224,8 +311,8 @@ export function ParkingMapPage() {
                         <div className="selected-spot-detail-card">
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
                                 <div>
-                                    <span className={`status-badge ${STATUS_INFO[selectedSpot.status]?.badgeClass}`}>
-                                        {STATUS_INFO[selectedSpot.status]?.icon} {STATUS_INFO[selectedSpot.status]?.label}
+                                    <span className={`status-badge ${STATUS_INFO[selectedSpot.status]?.badgeClass || "status-unknown"}`}>
+                                        {STATUS_INFO[selectedSpot.status]?.icon || "🅿️"} {STATUS_INFO[selectedSpot.status]?.label || "空き情報なし"}
                                     </span>
                                     <h3 style={{ margin: "6px 0 2px" }}>{selectedSpot.name}</h3>
                                     <p style={{ margin: 0, fontSize: "13px", color: "#555" }}>
@@ -255,7 +342,11 @@ export function ParkingMapPage() {
                                 </div>
                             </div>
 
-                            <div className="spot-detail-body">
+                            {selectedSpot.source === "mapbox" ? (
+                                <div className="spot-detail-body">
+                                    <p>Mapboxの検索結果に料金、営業時間、支払い方法、空き状況の情報は含まれていません。</p>
+                                </div>
+                            ) : <div className="spot-detail-body">
                                 <div className="detail-row">
                                     <span className="detail-label">料金体系:</span>
                                     <div>
@@ -289,16 +380,16 @@ export function ParkingMapPage() {
                                         <span style={{ fontSize: "12px", color: "#666" }}>{selectedSpot.notes}</span>
                                     </div>
                                 )}
-                            </div>
+                            </div>}
 
                             <div className="detail-actions" style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                <button
+                                {selectedSpot.source !== "mapbox" && <button
                                     type="button"
                                     onClick={() => handleUseForCalculator(selectedSpot)}
                                     style={{ flex: "1 1 180px" }}
                                 >
                                     💰 この駐車場で料金計算する
-                                </button>
+                                </button>}
                                 <a
                                     href={`https://www.google.com/maps/dir/?api=1&destination=${selectedSpot.lat},${selectedSpot.lng}`}
                                     target="_blank"
@@ -334,7 +425,7 @@ export function ParkingMapPage() {
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                                    <span className={`status-badge ${statusConfig.badgeClass}`}>
+                                            <span className={`status-badge ${statusConfig.badgeClass || "status-unknown"}`}>
                                                         {statusConfig.icon} {statusConfig.label}
                                                     </span>
                                                     {spot.distance && (
@@ -360,22 +451,24 @@ export function ParkingMapPage() {
                                             </button>
                                         </div>
 
-                                        <div style={{ fontSize: "13px", display: "grid", gap: "2px", margin: "6px 0" }}>
+                                        {spot.source === "mapbox" ? (
+                                            <p className="parking-search-note">料金・営業時間・空き状況の情報はありません。</p>
+                                        ) : <div style={{ fontSize: "13px", display: "grid", gap: "2px", margin: "6px 0" }}>
                                             <div>☀️ 昼: {spot.dayRateText}</div>
                                             <div style={{ color: "#c62828", fontWeight: "bold" }}>
                                                 🏷️ 最大: {spot.maxRateText}
                                             </div>
-                                        </div>
+                                        </div>}
 
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", flexWrap: "wrap", gap: "6px" }}>
-                                            <div style={{ display: "flex", gap: "4px" }}>
+                                            {spot.source !== "mapbox" && <div style={{ display: "flex", gap: "4px" }}>
                                                 {spot.paymentMethods.map((m) => (
                                                     <span key={m} style={{ fontSize: "12px" }} title={PAYMENT_METHOD_LABELS[m]?.label}>
                                                         {PAYMENT_METHOD_LABELS[m]?.icon}
                                                     </span>
                                                 ))}
-                                            </div>
-                                            <button
+                                            </div>}
+                                            {spot.source !== "mapbox" && <button
                                                 type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -385,7 +478,7 @@ export function ParkingMapPage() {
                                                 style={{ padding: "4px 8px", fontSize: "12px" }}
                                             >
                                                 計算へ送る →
-                                            </button>
+                                            </button>}
                                         </div>
                                     </div>
                                 );
