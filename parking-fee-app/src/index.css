@@ -580,21 +580,23 @@ button:hover {
   gap: 16px;
   width: min(100%, 560px);
   margin: 0 auto;
-  padding-top: 30px;
+  padding-top: 20px;
 }
 
 .map-page-header {
-  display: grid;
-  grid-template-columns: 32px 1fr 32px;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .map-page-header h2 {
   margin: 0;
   color: var(--color-text);
   font-size: 21px;
-  text-align: center;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .map-back-button {
@@ -615,29 +617,20 @@ button:hover {
 
 .map-page-header .location-action-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .map-page-header .location-action-bar button {
-  width: 32px;
-  height: 32px;
-  overflow: hidden;
-  padding: 0;
+  width: auto;
+  min-height: 40px;
+  padding: 8px 14px;
   border: 1px solid var(--color-primary);
-  border-radius: 50%;
+  border-radius: 22px;
   background: #ffffff;
-  color: transparent;
-  white-space: nowrap;
-}
-
-.map-page-header .location-action-bar button::after {
-  content: "";
-  display: block;
-  width: 14px;
-  height: 14px;
-  margin: auto;
-  border: 1px solid #222;
-  border-radius: 50%;
+  color: var(--color-text);
+  white-space: normal;
+  text-align: left;
 }
 
 .search-filter-card {
@@ -700,6 +693,40 @@ button:hover {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.search-input-row input,
+.search-input-row select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .map-page-container {
+    padding-top: 14px;
+  }
+
+  .map-page-header h2 {
+    font-size: 19px;
+  }
+
+  .search-filter-card {
+    padding: 12px;
+  }
+
+  .nearby-parking-search-button {
+    width: 100%;
+  }
+
+  .search-input-row input,
+  .search-input-row select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .filter-group {
+    flex-wrap: wrap;
+  }
 }
 
 .map-search-card .search-input-row input,
