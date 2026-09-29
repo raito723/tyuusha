@@ -5,8 +5,6 @@ import {
     PAYMENT_METHOD_LABELS,
     STATUS_INFO,
     filterAndSortSpots,
-    getFavoriteSpotIds,
-    toggleFavoriteSpot,
 } from "../lib/parkingSpots";
 import { searchNearbyParking } from "../lib/mapboxParkingSearch";
 import { ParkingMap } from "../components/ParkingMap";
@@ -18,7 +16,6 @@ export function ParkingMapPage() {
 
     // 駐車場データ & 状態
     const [spots] = useState(DEFAULT_PARKING_SPOTS);
-    const [favoriteIds, setFavoriteIds] = useState(getFavoriteSpotIds());
     const [selectedSpot, setSelectedSpot] = useState(null);
     const [mapboxSpots, setMapboxSpots] = useState(null);
     const [mapboxAttribution, setMapboxAttribution] = useState("");
@@ -34,7 +31,6 @@ export function ParkingMapPage() {
     const [keyword, setKeyword] = useState("");
     const [paymentFilter, setPaymentFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
-    const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [sortBy, setSortBy] = useState("distance");
 
     // モバイル用表示タブ（マップ / リスト）
@@ -106,13 +102,6 @@ export function ParkingMapPage() {
         }
     };
 
-    // お気に入り切り替え
-    const handleToggleFavorite = (spotId, e) => {
-        if (e) e.stopPropagation();
-        const updated = toggleFavoriteSpot(spotId);
-        setFavoriteIds(updated);
-    };
-
     // 料金計算画面への連携
     const handleUseForCalculator = (spot) => {
         navigate("/calculator", {
@@ -133,8 +122,6 @@ export function ParkingMapPage() {
             keyword,
             paymentFilter,
             statusFilter,
-            onlyFavorites,
-            favoriteIds,
             userLocation,
             sortBy,
         })
@@ -144,7 +131,7 @@ export function ParkingMapPage() {
                 const matchesKeyword = !query
                     || spot.name.toLocaleLowerCase().includes(query)
                     || spot.address.toLocaleLowerCase().includes(query);
-                return matchesKeyword && (!onlyFavorites || favoriteIds.includes(spot.id));
+                return matchesKeyword;
             })
             .sort((a, b) => sortBy === "distance" ? a.distance - b.distance : 0);
 
@@ -259,21 +246,6 @@ export function ParkingMapPage() {
                         </select>
                     </div>
 
-                    {/* お気に入り切り替えボタン */}
-                    <button
-                        type="button"
-                        onClick={() => setOnlyFavorites(!onlyFavorites)}
-                        className={onlyFavorites ? "btn-accent" : "btn-secondary"}
-                        style={{
-                            padding: "6px 12px",
-                            fontSize: "13px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                        }}
-                    >
-                        {onlyFavorites ? "★ お気に入りのみ表示中" : "☆ お気に入りのみ"}
-                    </button>
                 </div>}
             </div>
 
@@ -321,15 +293,6 @@ export function ParkingMapPage() {
                                     </p>
                                 </div>
                                 <div style={{ display: "flex", gap: "4px" }}>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => handleToggleFavorite(selectedSpot.id, e)}
-                                        className="btn-icon"
-                                        style={{ fontSize: "20px" }}
-                                        title={favoriteIds.includes(selectedSpot.id) ? "お気に入り解除" : "お気に入り追加"}
-                                    >
-                                        {favoriteIds.includes(selectedSpot.id) ? "★" : "☆"}
-                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedSpot(null)}
@@ -413,7 +376,6 @@ export function ParkingMapPage() {
                         ) : (
                             filteredSpots.map((spot) => {
                                 const isSelected = selectedSpot?.id === spot.id;
-                                const isFav = favoriteIds.includes(spot.id);
                                 const statusConfig = STATUS_INFO[spot.status] || STATUS_INFO.vacant;
 
                                 return (
@@ -440,15 +402,6 @@ export function ParkingMapPage() {
                                                 </p>
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={(e) => handleToggleFavorite(spot.id, e)}
-                                                className="btn-icon"
-                                                style={{ fontSize: "18px", color: isFav ? "#f59e0b" : "#ccc" }}
-                                                title={isFav ? "お気に入り解除" : "お気に入り追加"}
-                                            >
-                                                {isFav ? "★" : "☆"}
-                                            </button>
                                         </div>
 
                                         {spot.source === "mapbox" ? (
