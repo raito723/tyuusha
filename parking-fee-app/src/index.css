@@ -171,6 +171,20 @@ header h1 {
   line-height: 1;
 }
 
+.home-action-icon,
+.home-premium-icon {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+}
+
+.home-action-icon {
+  color: currentColor;
+}
+
 .home-premium-card {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -178,6 +192,10 @@ header h1 {
   padding: 16px 38px 16px 96px;
   background: #fff1cc;
   color: var(--color-text);
+}
+
+.home-premium-icon {
+  top: 42px;
 }
 
 .home-premium-title {
