@@ -92,13 +92,8 @@ async function extractParkingRule(imageBuffer, mimeType) {
     }
 
     const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const requestBody = JSON.stringify({
             contents: [{
                 role: "user",
                 parts: [
@@ -111,16 +106,44 @@ async function extractParkingRule(imageBuffer, mimeType) {
                 responseSchema: parkingRuleSchema,
                 temperature: 0,
             },
-        }),
-        signal: AbortSignal.timeout(90_000),
     });
 
-    const result = await response.json();
-    if (!response.ok) {
-        const error = new Error(result.error?.message || "Gemini APIの解析に失敗しました。");
+    let response;
+    let result;
+    let attempt = 0;
+    while (true) {
+        try {
+            response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": apiKey,
+                },
+                body: requestBody,
+                signal: AbortSignal.timeout(90_000),
+            });
+        } catch (error) {
+            if (error.name !== "TimeoutError") throw error;
+            await waitBeforeRetry(attempt++);
+            continue;
+        }
+
+        result = await response.json().catch(() => ({}));
+        if (response.ok) break;
+
+        const apiMessage = result.error?.message || "Gemini APIの解析に失敗しました。";
+        const temporaryFailure = response.status === 503
+            || /high demand|overload|temporarily unavailable|try again later/i.test(apiMessage);
+        if (temporaryFailure) {
+            await waitBeforeRetry(attempt++);
+            continue;
+        }
+
+        const error = new Error(apiMessage);
         error.statusCode = response.status === 429 ? 429 : 502;
         throw error;
     }
+
     const responseText = result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
     if (!responseText) throw new Error("Geminiから読み取り結果が返りませんでした。");
 
@@ -129,6 +152,12 @@ async function extractParkingRule(imageBuffer, mimeType) {
         rule: normalizeGeminiRule(extracted),
         rawText: typeof extracted.rawText === "string" ? extracted.rawText.slice(0, 20000) : "",
     };
+}
+
+function waitBeforeRetry(attempt) {
+    const delayMs = Math.min(1000 * (2 ** Math.min(attempt, 5)), 30_000);
+    const jitterMs = Math.floor(Math.random() * 1000);
+    return new Promise((resolve) => setTimeout(resolve, delayMs + jitterMs));
 }
 
 app.get("/api/health", (_request, response) => {

@@ -398,7 +398,7 @@ export function PhotoOcrPage() {
             {pageStep === "analyzing" && (
                 <section className="ocr-processing-page" role="status" aria-live="polite">
                     {previewUrl && <img src={previewUrl} alt="解析中の料金表" />}
-                    <p>{isAnalyzing ? "料金表を読み取っています..." : "読み取り結果を整理しています..."}</p>
+                    <p>{isAnalyzing ? "料金表を読み取っています。Geminiが混雑している場合は自動で再試行します..." : "読み取り結果を整理しています..."}</p>
                 </section>
             )}
 
