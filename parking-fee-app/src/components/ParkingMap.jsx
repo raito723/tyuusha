@@ -3,8 +3,6 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { STATUS_INFO } from "../lib/parkingSpots";
 
-const DEFAULT_CENTER = [139.767125, 35.681236];
-
 function createMarkerElement(status, selected) {
     const marker = document.createElement("div");
     marker.className = `parking-map-marker${selected ? " is-selected" : ""}`;
@@ -24,12 +22,12 @@ function createUserMarkerElement() {
     return element;
 }
 
-function updateUserLocation(map, location, markerRef) {
+function updateUserLocation(map, location, markerRef, shouldCenter = true) {
     markerRef.current?.remove();
     markerRef.current = null;
     if (!location) return;
 
-    map.flyTo({ center: [location.lng, location.lat], zoom: 15 });
+    if (shouldCenter) map.flyTo({ center: [location.lng, location.lat], zoom: 15 });
     markerRef.current = new mapboxgl.Marker({ element: createUserMarkerElement(), anchor: "center" })
         .setLngLat([location.lng, location.lat])
         .addTo(map);
@@ -74,7 +72,7 @@ export function ParkingMap({
     userLocation = null,
     selectedSpot = null,
     onSelectSpot = () => {},
-    center = DEFAULT_CENTER,
+    center = null,
     zoom = 15,
 }) {
     const mapContainerRef = useRef(null);
@@ -97,6 +95,7 @@ export function ParkingMap({
             setMapError("Mapboxを表示するには .env.local に VITE_MAPBOX_ACCESS_TOKEN を設定してください。");
             return undefined;
         }
+        if (!userLocation && !center) return undefined;
 
         mapboxgl.accessToken = accessToken;
         const initialCenter = userLocation
@@ -120,7 +119,7 @@ export function ParkingMap({
         map.once("load", () => {
             mapLoadedRef.current = true;
             setMapError("");
-            updateUserLocation(map, userLocationRef.current, userMarkerRef);
+            updateUserLocation(map, userLocationRef.current, userMarkerRef, false);
         });
 
         return () => {
@@ -135,7 +134,7 @@ export function ParkingMap({
             map.remove();
             mapRef.current = null;
         };
-    }, [accessToken, center, zoom]);
+    }, [accessToken, center, userLocation, zoom]);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -165,7 +164,7 @@ export function ParkingMap({
 
     useEffect(() => {
         if (!mapRef.current || !mapLoadedRef.current) return;
-        updateUserLocation(mapRef.current, userLocation, userMarkerRef);
+        updateUserLocation(mapRef.current, userLocation, userMarkerRef, mapLoadedRef.current);
     }, [userLocation]);
 
     useEffect(() => {
@@ -185,6 +184,9 @@ export function ParkingMap({
     return (
         <div className="parking-map-shell">
             <div ref={mapContainerRef} className="parking-map-canvas" />
+            {!userLocation && !mapError && (
+                <div className="parking-map-error" role="status">現在地を取得すると地図を表示します。</div>
+            )}
             {mapError && <div className="parking-map-error" role="status">{mapError}</div>}
         </div>
     );

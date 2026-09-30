@@ -12,7 +12,6 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@tesseract.js-data/jpn": "^1.0.0",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
@@ -21,9 +20,7 @@
     "multer": "^2.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4",
-    "sharp": "^0.35.5",
-    "tesseract.js": "^7.0.0"
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
