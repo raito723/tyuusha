@@ -15,7 +15,6 @@ export function HomePage() {
                 <span className="home-map-marker" aria-hidden="true" />
                 <span className="home-map-road home-map-road-one" aria-hidden="true" />
                 <span className="home-map-road home-map-road-two" aria-hidden="true" />
-                <span className="home-map-location" aria-hidden="true" />
             </div>
 
             <div className="home-actions">
