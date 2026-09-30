@@ -6,10 +6,8 @@ import {
     STATUS_INFO,
     filterAndSortSpots,
 } from "../lib/parkingSpots";
-import { searchNearbyParking } from "../lib/mapboxParkingSearch";
+import { searchLocation, searchNearbyParking } from "../lib/mapboxParkingSearch";
 import { ParkingMap } from "../components/ParkingMap";
-
-const DEFAULT_SEARCH_CENTER = { lat: 35.681236, lng: 139.767125 };
 
 export function ParkingMapPage() {
     const navigate = useNavigate();
@@ -20,6 +18,7 @@ export function ParkingMapPage() {
     const [mapboxSpots, setMapboxSpots] = useState(null);
     const [mapboxAttribution, setMapboxAttribution] = useState("");
     const [parkingSearchLoading, setParkingSearchLoading] = useState(false);
+    const [locationSearchLoading, setLocationSearchLoading] = useState(false);
     const [parkingSearchError, setParkingSearchError] = useState("");
 
     // 現在地取得関連
@@ -62,7 +61,7 @@ export function ParkingMapPage() {
             (error) => {
                 let msg = "位置情報の取得に失敗しました。";
                 if (error.code === error.PERMISSION_DENIED) {
-                    msg = "位置情報の利用が許可されていません（ブラウザの設定をご確認ください）。標準位置（東京駅周辺）で表示しています。";
+                    msg = "位置情報の利用が許可されていません。ブラウザの設定をご確認のうえ、現在地を再取得してください。";
                 } else if (error.code === error.POSITION_UNAVAILABLE) {
                     msg = "現在地を特定できませんでした。";
                 } else if (error.code === error.TIMEOUT) {
@@ -70,8 +69,6 @@ export function ParkingMapPage() {
                 }
                 setLocationError(msg);
                 setLocationLoading(false);
-                // デフォルトとして東京駅に設定
-                setUserLocation({ lat: 35.681236, lng: 139.767125 });
             },
             {
                 enableHighAccuracy: true,
@@ -83,13 +80,16 @@ export function ParkingMapPage() {
 
     const handleSearchNearbyParking = async () => {
         const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-        const center = userLocation || DEFAULT_SEARCH_CENTER;
+        if (!userLocation) {
+            setParkingSearchError("現在地を取得できません。位置情報を許可して再取得してください。");
+            return;
+        }
         setParkingSearchLoading(true);
         setParkingSearchError("");
         setSelectedSpot(null);
 
         try {
-            const result = await searchNearbyParking(center, token);
+            const result = await searchNearbyParking(userLocation, token);
             setMapboxSpots(result.spots);
             setMapboxAttribution(result.attribution);
             setSortBy("distance");
@@ -99,6 +99,32 @@ export function ParkingMapPage() {
             setParkingSearchError(error.message || "駐車場を検索できませんでした。");
         } finally {
             setParkingSearchLoading(false);
+        }
+    };
+
+    const handleSearchLocation = async () => {
+        const query = keyword.trim();
+        if (!query) {
+            setParkingSearchError("地名や住所を入力してください。");
+            return;
+        }
+
+        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+        setLocationSearchLoading(true);
+        setParkingSearchError("");
+        setSelectedSpot(null);
+        try {
+            const center = await searchLocation(query, token, userLocation);
+            const result = await searchNearbyParking(center, token);
+            setUserLocation(center);
+            setKeyword("");
+            setMapboxSpots(result.spots);
+            setMapboxAttribution(result.attribution);
+            setSortBy("distance");
+        } catch (error) {
+            setParkingSearchError(error.message || "場所を検索できませんでした。");
+        } finally {
+            setLocationSearchLoading(false);
         }
     };
 
@@ -171,7 +197,7 @@ export function ParkingMapPage() {
                     <button
                         type="button"
                         onClick={handleSearchNearbyParking}
-                        disabled={parkingSearchLoading}
+                        disabled={parkingSearchLoading || locationLoading || !userLocation}
                         className="nearby-parking-search-button"
                     >
                         {parkingSearchLoading ? "検索中..." : "📍 この周辺の駐車場を検索（5km）"}
@@ -200,11 +226,22 @@ export function ParkingMapPage() {
                 <div className="search-input-row">
                     <input
                         type="text"
-                        placeholder="🔍 駐車場名・住所で検索..."
+                        placeholder="駐車場名・住所で絞り込み / 地名で検索..."
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSearchLocation();
+                        }}
                         style={{ flex: "1 1 200px" }}
                     />
+                    <button
+                        type="button"
+                        onClick={handleSearchLocation}
+                        disabled={locationSearchLoading || parkingSearchLoading}
+                        className="btn-secondary"
+                    >
+                        {locationSearchLoading ? "場所を検索中..." : "地名で周辺検索"}
+                    </button>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
