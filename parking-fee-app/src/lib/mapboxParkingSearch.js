@@ -5,8 +5,32 @@ const MAX_RESULTS = 25;
 const SEARCH_GRID_SIZE = 2;
 const CATEGORY_LIST_URL = "https://api.mapbox.com/search/searchbox/v1/list/category";
 const CATEGORY_SEARCH_URL = "https://api.mapbox.com/search/searchbox/v1/category";
+const GEOCODE_SEARCH_URL = "https://api.mapbox.com/search/geocode/v6/forward";
 
 let categoryCache = { token: "", id: "" };
+
+export async function searchLocation(query, token, proximity = null) {
+    if (!token) throw new Error("Mapboxトークンがありません。.env.local に VITE_MAPBOX_ACCESS_TOKEN を設定してください。");
+
+    const params = new URLSearchParams({
+        q: query,
+        access_token: token,
+        language: "ja",
+        country: "JP",
+        limit: "1",
+    });
+    if (proximity) params.set("proximity", `${proximity.lng},${proximity.lat}`);
+
+    const response = await fetch(`${GEOCODE_SEARCH_URL}?${params}`);
+    if (!response.ok) throw new Error("場所を検索できませんでした。別の地名や住所をお試しください。");
+
+    const data = await response.json();
+    const [lng, lat] = data.features?.[0]?.geometry?.coordinates || [];
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new Error("場所が見つかりませんでした。地名や住所を確認してください。");
+    }
+    return { lat, lng };
+}
 
 async function getParkingCategoryId(token) {
     if (categoryCache.token === token && categoryCache.id) return categoryCache.id;
