@@ -555,6 +555,42 @@ button:hover {
   padding-top: 18px;
 }
 
+.ocr-processing-page {
+  display: flex;
+  min-height: min(65vh, 560px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.ocr-processing-page p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ocr-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: ocr-spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes ocr-spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ocr-loading-spinner {
+    animation-duration: 2s;
+  }
+}
+
 .ocr-privacy-note {
   margin: 16px 0 0;
   padding: 12px;
@@ -759,6 +795,15 @@ button:hover {
 .ocr-step-close:hover {
   background: transparent;
   color: var(--color-primary);
+}
+
+.ocr-result-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  margin: 16px auto 0;
+  border-radius: 12px;
+  object-fit: contain;
 }
 
 .ocr-result-content {
