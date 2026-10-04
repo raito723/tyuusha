@@ -397,8 +397,8 @@ export function PhotoOcrPage() {
 
             {pageStep === "analyzing" && (
                 <section className="ocr-processing-page" role="status" aria-live="polite">
-                    {previewUrl && <img src={previewUrl} alt="解析中の料金表" />}
-                    <p>{isAnalyzing ? "料金表を読み取っています。Geminiが混雑している場合は自動で再試行します..." : "読み取り結果を整理しています..."}</p>
+                    <span className="ocr-loading-spinner" aria-hidden="true" />
+                    <p>AIが画像を読み込んでいます…</p>
                 </section>
             )}
 
@@ -409,6 +409,7 @@ export function PhotoOcrPage() {
                         <h2>読み取り結果</h2>
                         <span />
                     </div>
+                    {previewUrl && <img className="ocr-result-image" src={previewUrl} alt="読み取りに使用した料金表" />}
                     <div className="ocr-result-content">
                         <h3>料金を読み取りました</h3>
                         {rateRows.length > 0 ? (
