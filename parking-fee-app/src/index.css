@@ -6,6 +6,9 @@
   --color-highlight-deep: #b38545;
   --color-surface-soft: #eef8f5;
   --color-border: #ccf1e9;
+  --color-premium-bg: #fcf3d8;
+  --color-premium-gold: #ecc85a;
+  --color-premium-navy: #485d87;
 }
 
 * {
@@ -207,6 +210,147 @@ header h1 {
   grid-column: 1 / -1;
   font-size: 15px;
   line-height: 1.6;
+}
+
+.premium-page {
+  display: flex;
+  min-height: calc(100dvh - 82px);
+  flex-direction: column;
+  align-items: center;
+  /* main の左右 padding(24px) を打ち消す */
+  margin: 0 -24px -150px;
+  /* 下の余白(150px)ぶんも背景で埋める。固定ナビに隠れないよう内側にも確保 */
+  padding: 56px 24px 190px;
+  background: var(--color-premium-bg);
+  color: var(--color-premium-navy);
+  /* 背景を画面の左右いっぱいまで広げる */
+  box-shadow: 0 0 0 100vmax var(--color-premium-bg);
+  clip-path: inset(0 -100vmax);
+}
+
+.premium-hero {
+  text-align: center;
+}
+
+.premium-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.premium-catch {
+  margin: 8px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.premium-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin-top: 28px;
+  padding: 16px 20px;
+  border: 2px solid var(--color-premium-gold);
+  border-radius: 20px;
+  background: #ffffff;
+}
+
+.premium-price-label,
+.premium-price-amount {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.premium-price-tax {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.premium-benefits {
+  display: grid;
+  gap: 24px;
+  width: min(100%, 360px);
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.premium-benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.premium-benefit-check {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-premium-gold);
+}
+
+.premium-benefit-text {
+  display: grid;
+  gap: 2px;
+  line-height: 1.5;
+}
+
+.premium-benefit-text strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.premium-benefit-text span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.premium-actions {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 360px);
+  margin-top: 40px;
+}
+
+.premium-join-button,
+.premium-detail-button {
+  min-height: 56px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.premium-join-button {
+  border: 0;
+  background: var(--color-premium-navy);
+  color: #ffffff;
+}
+
+.premium-join-button:hover {
+  background: #3a4d73;
+}
+
+.premium-detail-button {
+  border: 2px solid var(--color-premium-navy);
+  background: transparent;
+  color: var(--color-premium-navy);
+}
+
+.premium-detail-button:hover {
+  background: rgba(72, 93, 135, 0.08);
+}
+
+.premium-join-button:focus-visible,
+.premium-detail-button:focus-visible {
+  outline: 3px solid var(--color-premium-gold);
+  outline-offset: 2px;
 }
 
 .nearby-parking {

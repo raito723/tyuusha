@@ -28,7 +28,7 @@ export function HomePage() {
                     <span>料金表を撮影して<br />料金を計算する</span>
                     <span className="home-action-arrow" aria-hidden="true">›</span>
                 </Link>
-                <Link to="/settings" className="home-premium-card">
+                <Link to="/premium" className="home-premium-card">
                     <span className="home-premium-icon" aria-hidden="true"><IconlyTicketStar size={38} color="#415E8A" /></span>
                     <span className="home-premium-title">プレミアムプラン</span>
                     <span className="home-action-arrow" aria-hidden="true">›</span>
