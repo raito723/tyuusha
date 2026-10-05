@@ -6,8 +6,32 @@ import {
     STATUS_INFO,
     filterAndSortSpots,
 } from "../lib/parkingSpots";
-import { searchLocation, searchNearbyParking } from "../lib/mapboxParkingSearch";
+import { decodeGooglePolyline } from "../lib/googleMapsLoader";
 import { ParkingMap } from "../components/ParkingMap";
+
+async function postMapsRequest(path, body) {
+    const response = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Google Maps APIの処理に失敗しました。");
+    return result;
+}
+
+function formatRouteDuration(duration) {
+    const seconds = Number.parseInt(duration || "", 10);
+    if (!Number.isFinite(seconds)) return "";
+    const minutes = Math.ceil(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    return hours ? `約${hours}時間${minutes % 60}分` : `約${minutes}分`;
+}
+
+function formatRouteDistance(meters) {
+    if (!Number.isFinite(meters)) return "";
+    return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
+}
 
 export function ParkingMapPage() {
     const navigate = useNavigate();
@@ -15,11 +39,15 @@ export function ParkingMapPage() {
     // 駐車場データ & 状態
     const [spots] = useState(DEFAULT_PARKING_SPOTS);
     const [selectedSpot, setSelectedSpot] = useState(null);
-    const [mapboxSpots, setMapboxSpots] = useState(null);
-    const [mapboxAttribution, setMapboxAttribution] = useState("");
+    const [googleSpots, setGoogleSpots] = useState(null);
+    const [searchCenter, setSearchCenter] = useState(null);
     const [parkingSearchLoading, setParkingSearchLoading] = useState(false);
     const [locationSearchLoading, setLocationSearchLoading] = useState(false);
     const [parkingSearchError, setParkingSearchError] = useState("");
+    const [routePath, setRoutePath] = useState([]);
+    const [routeDetails, setRouteDetails] = useState(null);
+    const [routeLoading, setRouteLoading] = useState(false);
+    const [routeError, setRouteError] = useState("");
 
     // 現在地取得関連
     const [userLocation, setUserLocation] = useState(null);
@@ -56,6 +84,7 @@ export function ParkingMapPage() {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                 });
+                setSearchCenter(null);
                 setLocationLoading(false);
             },
             (error) => {
@@ -79,23 +108,23 @@ export function ParkingMapPage() {
     };
 
     const handleSearchNearbyParking = async () => {
-        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-        if (!userLocation) {
+        const center = searchCenter || userLocation;
+        if (!center) {
             setParkingSearchError("現在地を取得できません。位置情報を許可して再取得してください。");
             return;
         }
         setParkingSearchLoading(true);
         setParkingSearchError("");
         setSelectedSpot(null);
+        setRoutePath([]);
+        setRouteDetails(null);
 
         try {
-            const result = await searchNearbyParking(userLocation, token);
-            setMapboxSpots(result.spots);
-            setMapboxAttribution(result.attribution);
+            const result = await postMapsRequest("/api/maps/parking/nearby", { center });
+            setGoogleSpots(result);
             setSortBy("distance");
         } catch (error) {
-            setMapboxSpots([]);
-            setMapboxAttribution("");
+            setGoogleSpots([]);
             setParkingSearchError(error.message || "駐車場を検索できませんでした。");
         } finally {
             setParkingSearchLoading(false);
@@ -109,22 +138,53 @@ export function ParkingMapPage() {
             return;
         }
 
-        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
         setLocationSearchLoading(true);
         setParkingSearchError("");
         setSelectedSpot(null);
+        setRoutePath([]);
+        setRouteDetails(null);
         try {
-            const center = await searchLocation(query, token, userLocation);
-            const result = await searchNearbyParking(center, token);
-            setUserLocation(center);
+            const place = await postMapsRequest("/api/maps/place", { query, biasCenter: userLocation });
+            const center = place;
+            const result = await postMapsRequest("/api/maps/parking/nearby", { center });
+            setSearchCenter(center);
             setKeyword("");
-            setMapboxSpots(result.spots);
-            setMapboxAttribution(result.attribution);
+            setGoogleSpots(result);
             setSortBy("distance");
         } catch (error) {
             setParkingSearchError(error.message || "場所を検索できませんでした。");
         } finally {
             setLocationSearchLoading(false);
+        }
+    };
+
+    const handleSelectSpot = (spot) => {
+        setSelectedSpot(spot);
+        setRoutePath([]);
+        setRouteDetails(null);
+        setRouteError("");
+    };
+
+    const handleFindRoute = async () => {
+        if (!userLocation || !selectedSpot) {
+            setRouteError("現在地を取得してから経路を検索してください。");
+            return;
+        }
+        setRouteLoading(true);
+        setRouteError("");
+        setRoutePath([]);
+        setRouteDetails(null);
+        try {
+            const result = await postMapsRequest("/api/maps/route", {
+                origin: userLocation,
+                destination: { lat: selectedSpot.lat, lng: selectedSpot.lng },
+            });
+            setRouteDetails(result);
+            setRoutePath(decodeGooglePolyline(result.encodedPolyline));
+        } catch (error) {
+            setRouteError(error.message || "経路を検索できませんでした。");
+        } finally {
+            setRouteLoading(false);
         }
     };
 
@@ -143,7 +203,7 @@ export function ParkingMapPage() {
     };
 
     // フィルタリング・ソート済みリスト
-    const filteredSpots = mapboxSpots === null
+    const filteredSpots = googleSpots === null
         ? filterAndSortSpots(spots, {
             keyword,
             paymentFilter,
@@ -151,7 +211,7 @@ export function ParkingMapPage() {
             userLocation,
             sortBy,
         })
-        : mapboxSpots
+        : googleSpots
             .filter((spot) => {
                 const query = keyword.trim().toLocaleLowerCase();
                 const matchesKeyword = !query
@@ -197,19 +257,21 @@ export function ParkingMapPage() {
                     <button
                         type="button"
                         onClick={handleSearchNearbyParking}
-                        disabled={parkingSearchLoading || locationLoading || !userLocation}
+                    disabled={parkingSearchLoading || locationLoading || !(searchCenter || userLocation)}
                         className="nearby-parking-search-button"
                     >
-                        {parkingSearchLoading ? "検索中..." : "📍 この周辺の駐車場を検索（5km）"}
+                        {parkingSearchLoading ? "検索中..." : `📍 ${searchCenter ? "検索地点" : "現在地"}の周辺駐車場を検索（5km）`}
                     </button>
-                    {mapboxSpots !== null && (
+                    {googleSpots !== null && (
                         <button
                             type="button"
                             onClick={() => {
-                                setMapboxSpots(null);
-                                setMapboxAttribution("");
+                                setGoogleSpots(null);
+                                setSearchCenter(null);
                                 setParkingSearchError("");
                                 setSelectedSpot(null);
+                                setRoutePath([]);
+                                setRouteDetails(null);
                             }}
                             className="btn-secondary"
                         >
@@ -218,9 +280,9 @@ export function ParkingMapPage() {
                     )}
                 </div>
                 {parkingSearchError && <div className="error-message" role="alert">{parkingSearchError}</div>}
-                {mapboxSpots !== null && (
+                {googleSpots !== null && (
                     <p className="parking-search-note">
-                        Mapboxの周辺検索結果を表示中です。料金・空き状況は検索結果に含まれないため、詳細は駐車場でご確認ください。
+                        Google Placesの周辺検索結果を表示中です。料金・空き状況は検索結果に含まれないため、詳細は駐車場でご確認ください。
                     </p>
                 )}
                 <div className="search-input-row">
@@ -248,12 +310,12 @@ export function ParkingMapPage() {
                         style={{ minWidth: "150px" }}
                     >
                         <option value="distance">📍 距離が近い順</option>
-                        {mapboxSpots === null && <option value="dayPrice">💰 昼間料金が安い順</option>}
-                        {mapboxSpots === null && <option value="maxFee">🏷️ 最大料金が安い順</option>}
+                        {googleSpots === null && <option value="dayPrice">💰 昼間料金が安い順</option>}
+                        {googleSpots === null && <option value="maxFee">🏷️ 最大料金が安い順</option>}
                     </select>
                 </div>
 
-                {mapboxSpots === null && <div className="filter-chips-row">
+                {googleSpots === null && <div className="filter-chips-row">
                     {/* 支払い方法フィルター */}
                     <div className="filter-group">
                         <span className="filter-group-label">支払い:</span>
@@ -289,18 +351,14 @@ export function ParkingMapPage() {
             {/* 結果カウント */}
             <div style={{ margin: "12px 0 8px", fontSize: "13px", color: "#666", display: "flex", justifyContent: "space-between" }}>
                 <span>該当件数: <b>{filteredSpots.length}</b> 件</span>
-                {mapboxSpots !== null ? (
-                    <span style={{ color: "#007a4d" }}>✓ Mapboxで周辺駐車場を検索済み</span>
+                {googleSpots !== null ? (
+                    <span style={{ color: "#007a4d" }}>✓ Google Mapsで周辺駐車場を検索済み</span>
                 ) : userLocation && (
                     <span style={{ color: "#007a4d" }}>
                         ✓ 現在地周辺の駐車場を表示中
                     </span>
                 )}
             </div>
-            {mapboxSpots !== null && mapboxAttribution && (
-                <p className="mapbox-attribution">{mapboxAttribution}</p>
-            )}
-
             {/* メインレイアウト（マップ ＋ リスト） */}
             <div className="map-content-grid">
                 {/* 地図エリア */}
@@ -308,8 +366,10 @@ export function ParkingMapPage() {
                     <ParkingMap
                         spots={filteredSpots}
                         userLocation={userLocation}
+                        center={searchCenter}
                         selectedSpot={selectedSpot}
-                        onSelectSpot={(spot) => setSelectedSpot(spot)}
+                        routePath={routePath}
+                        onSelectSpot={handleSelectSpot}
                     />
                 </div>
 
@@ -332,7 +392,7 @@ export function ParkingMapPage() {
                                 <div style={{ display: "flex", gap: "4px" }}>
                                     <button
                                         type="button"
-                                        onClick={() => setSelectedSpot(null)}
+                                        onClick={() => handleSelectSpot(null)}
                                         className="btn-icon"
                                         style={{ fontSize: "18px" }}
                                         title="詳細を閉じる"
@@ -342,9 +402,9 @@ export function ParkingMapPage() {
                                 </div>
                             </div>
 
-                            {selectedSpot.source === "mapbox" ? (
+                            {selectedSpot.source === "google" ? (
                                 <div className="spot-detail-body">
-                                    <p>Mapboxの検索結果に料金、営業時間、支払い方法、空き状況の情報は含まれていません。</p>
+                                    <p>Google Placesの検索結果には料金、営業時間、支払い方法、空き状況の情報が含まれていません。</p>
                                 </div>
                             ) : <div className="spot-detail-body">
                                 <div className="detail-row">
@@ -382,8 +442,26 @@ export function ParkingMapPage() {
                                 )}
                             </div>}
 
+                            <div className="route-search-panel">
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={handleFindRoute}
+                                    disabled={routeLoading || !userLocation}
+                                >
+                                    {routeLoading ? "経路を検索中..." : "🧭 現在地からの経路をアプリ内に表示"}
+                                </button>
+                                {!userLocation && <p className="route-search-note">経路を表示するには現在地を取得してください。</p>}
+                                {routeError && <p className="error-message" role="alert">{routeError}</p>}
+                                {routeDetails && (
+                                    <p className="route-search-note" aria-live="polite">
+                                        経路: {formatRouteDistance(routeDetails.distanceMeters)}・{formatRouteDuration(routeDetails.duration)}
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="detail-actions" style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                {selectedSpot.source !== "mapbox" && <button
+                                {selectedSpot.source !== "google" && <button
                                     type="button"
                                     onClick={() => handleUseForCalculator(selectedSpot)}
                                     style={{ flex: "1 1 180px" }}
@@ -391,13 +469,13 @@ export function ParkingMapPage() {
                                     💰 この駐車場で料金計算する
                                 </button>}
                                 <a
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${selectedSpot.lat},${selectedSpot.lng}`}
+                                    href={`https://www.google.com/maps/dir/?api=1${userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""}&destination=${selectedSpot.lat},${selectedSpot.lng}&travelmode=driving`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{ textDecoration: "none" }}
                                 >
                                     <button type="button" className="btn-secondary" style={{ height: "100%" }}>
-                                        🧭 Googleマップで経路
+                                        🗺️ Google Mapsで開く
                                     </button>
                                 </a>
                             </div>
@@ -419,7 +497,7 @@ export function ParkingMapPage() {
                                     <div
                                         key={spot.id}
                                         className={`spot-list-card ${isSelected ? "selected" : ""}`}
-                                        onClick={() => setSelectedSpot(spot)}
+                                        onClick={() => handleSelectSpot(spot)}
                                     >
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                             <div style={{ flex: 1 }}>
@@ -441,7 +519,7 @@ export function ParkingMapPage() {
 
                                         </div>
 
-                                        {spot.source === "mapbox" ? (
+                                        {spot.source === "google" ? (
                                             <p className="parking-search-note">料金・営業時間・空き状況の情報はありません。</p>
                                         ) : <div style={{ fontSize: "13px", display: "grid", gap: "2px", margin: "6px 0" }}>
                                             <div>☀️ 昼: {spot.dayRateText}</div>
@@ -451,14 +529,14 @@ export function ParkingMapPage() {
                                         </div>}
 
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", flexWrap: "wrap", gap: "6px" }}>
-                                            {spot.source !== "mapbox" && <div style={{ display: "flex", gap: "4px" }}>
+                                            {spot.source !== "google" && <div style={{ display: "flex", gap: "4px" }}>
                                                 {spot.paymentMethods.map((m) => (
                                                     <span key={m} style={{ fontSize: "12px" }} title={PAYMENT_METHOD_LABELS[m]?.label}>
                                                         {PAYMENT_METHOD_LABELS[m]?.icon}
                                                     </span>
                                                 ))}
                                             </div>}
-                                            {spot.source !== "mapbox" && <button
+                                            {spot.source !== "google" && <button
                                                 type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
