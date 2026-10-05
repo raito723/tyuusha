@@ -26,6 +26,13 @@ export function FeeCalculatorPage() {
     const [nightIntervalMinutes, setNightIntervalMinutes] = useState(60);
     const [nightPrice, setNightPrice] = useState(100);
     const [maximumFee, setMaximumFee] = useState(1000);
+    const [allDayRate, setAllDayRate] = useState(false);
+    const [maximumFeeAllDay, setMaximumFeeAllDay] = useState(true);
+    const [maximumFeeDay, setMaximumFeeDay] = useState("");
+    const [maximumFeeNight, setMaximumFeeNight] = useState("");
+    const [maximumFeeRecurring, setMaximumFeeRecurring] = useState(false);
+    const [maximumFeePeriodHours, setMaximumFeePeriodHours] = useState(24);
+    const [weekdayRates, setWeekdayRates] = useState({});
     const [budget, setBudget] = useState(0);
     const [result, setResult] = useState(null);
     const [savedRules, setSavedRules] = useState(getParkingRules());
@@ -47,25 +54,55 @@ export function FeeCalculatorPage() {
             if (rule.nightEndTime) setNightEndTime(rule.nightEndTime);
             if (rule.nightIntervalMinutes) setNightIntervalMinutes(rule.nightIntervalMinutes);
             if (rule.nightPrice !== undefined) setNightPrice(rule.nightPrice);
-            if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee);
+            if (rule.maximumFee !== undefined) setMaximumFee(rule.maximumFee ?? "");
+            setAllDayRate(Boolean(rule.allDayRate));
+            setMaximumFeeAllDay(rule.maximumFeeAllDay !== false);
+            setMaximumFeeDay(rule.maximumFeeDay ?? "");
+            setMaximumFeeNight(rule.maximumFeeNight ?? "");
+            setMaximumFeeRecurring(Boolean(rule.maximumFeeRecurring));
+            setMaximumFeePeriodHours(rule.maximumFeePeriodHours || 24);
+            setWeekdayRates(rule.weekdayRates || {});
         }
     }, [location.state]);
 
     function handleSubmit(event) {
         event.preventDefault();
 
+        const requiredRateValues = allDayRate
+            ? [dayIntervalMinutes, dayPrice]
+            : [dayIntervalMinutes, dayPrice, nightIntervalMinutes, nightPrice];
+        const missingRateValue = requiredRateValues.some((value) => value === "" || value === null || value === undefined);
+        const invalidRateValue = requiredRateValues.some((value) => !Number.isFinite(Number(value)) || Number(value) < 0);
+        const invalidInterval = (allDayRate ? [dayIntervalMinutes] : [dayIntervalMinutes, nightIntervalMinutes])
+            .some((value) => Number(value) <= 0);
+        if (missingRateValue) {
+            setResult({ error: "計算できません。料金と単位時間の数値を入力してください。" });
+            return;
+        }
+        if (invalidRateValue || invalidInterval) {
+            setResult({ error: "料金は0以上、単位時間は1以上の数値を入力してください。" });
+            return;
+        }
+
         const feeSettings = {
             startTime,
             endTime,
             dayStartTime,
             dayEndTime,
-            dayIntervalMinutes: Number(dayIntervalMinutes),
-            dayPrice: Number(dayPrice),
+            dayIntervalMinutes: Number(dayIntervalMinutes) || 30,
+            dayPrice: Number(dayPrice) || 0,
             nightStartTime,
             nightEndTime,
-            nightIntervalMinutes: Number(nightIntervalMinutes),
-            nightPrice: Number(nightPrice),
-            maximumFee: Number(maximumFee),
+            nightIntervalMinutes: Number(nightIntervalMinutes) || 60,
+            nightPrice: Number(nightPrice) || 0,
+            maximumFee: maximumFee === "" ? null : Number(maximumFee),
+            allDayRate,
+            maximumFeeAllDay,
+            maximumFeeDay: maximumFeeDay === "" ? null : Number(maximumFeeDay),
+            maximumFeeNight: maximumFeeNight === "" ? null : Number(maximumFeeNight),
+            maximumFeeRecurring,
+            maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
+            weekdayRates,
         };
 
         const calculationResult = calculateParkingFee(feeSettings);
@@ -80,9 +117,11 @@ export function FeeCalculatorPage() {
             targetFee: Number(budget),
         });
 
+        const maximumFeeTarget = [maximumFee, maximumFeeDay, maximumFeeNight]
+            .map(Number).filter((value) => value > 0).sort((left, right) => left - right)[0] || 0;
         const maximumFeeReachedAt = findTimeReachingFee({
             ...feeSettings,
-            targetFee: Number(maximumFee),
+            targetFee: maximumFeeTarget,
         });
 
         setResult({
@@ -97,6 +136,8 @@ export function FeeCalculatorPage() {
                 dayEndTime,
                 nightStartTime,
                 nightEndTime,
+                allDayRate,
+                weekdayRates,
             }),
         });
     }
@@ -182,13 +223,20 @@ export function FeeCalculatorPage() {
             name: ruleName.trim(),
             dayStartTime,
             dayEndTime,
-            dayIntervalMinutes: Number(dayIntervalMinutes),
-            dayPrice: Number(dayPrice),
+            dayIntervalMinutes: Number(dayIntervalMinutes) || 30,
+            dayPrice: Number(dayPrice) || 0,
             nightStartTime,
             nightEndTime,
-            nightIntervalMinutes: Number(nightIntervalMinutes),
-            nightPrice: Number(nightPrice),
-            maximumFee: Number(maximumFee),
+            nightIntervalMinutes: Number(nightIntervalMinutes) || 60,
+            nightPrice: Number(nightPrice) || 0,
+            maximumFee: maximumFee === "" ? null : Number(maximumFee),
+            allDayRate,
+            maximumFeeAllDay,
+            maximumFeeDay: maximumFeeDay === "" ? null : Number(maximumFeeDay),
+            maximumFeeNight: maximumFeeNight === "" ? null : Number(maximumFeeNight),
+            maximumFeeRecurring,
+            maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
+            weekdayRates,
         };
 
         const updatedRules = [...savedRules, newRule];
@@ -218,7 +266,14 @@ export function FeeCalculatorPage() {
         setNightEndTime(selectedRule.nightEndTime || "08:00");
         setNightIntervalMinutes(selectedRule.nightIntervalMinutes || 60);
         setNightPrice(selectedRule.nightPrice);
-        setMaximumFee(selectedRule.maximumFee);
+        setMaximumFee(selectedRule.maximumFee ?? "");
+        setAllDayRate(Boolean(selectedRule.allDayRate));
+        setMaximumFeeAllDay(selectedRule.maximumFeeAllDay !== false);
+        setMaximumFeeDay(selectedRule.maximumFeeDay ?? "");
+        setMaximumFeeNight(selectedRule.maximumFeeNight ?? "");
+        setMaximumFeeRecurring(Boolean(selectedRule.maximumFeeRecurring));
+        setMaximumFeePeriodHours(selectedRule.maximumFeePeriodHours || 24);
+        setWeekdayRates(selectedRule.weekdayRates || {});
     }
 
     function handleDeleteRule() {
@@ -262,13 +317,20 @@ export function FeeCalculatorPage() {
             endTime: endTime ? new Date(endTime).toISOString() : null,
             dayStartTime,
             dayEndTime,
-            dayIntervalMinutes: Number(dayIntervalMinutes),
+            dayIntervalMinutes: Number(dayIntervalMinutes) || 30,
             dayPrice: Number(dayPrice),
             nightStartTime,
             nightEndTime,
-            nightIntervalMinutes: Number(nightIntervalMinutes),
+            nightIntervalMinutes: Number(nightIntervalMinutes) || 60,
             nightPrice: Number(nightPrice),
-            maximumFee: Number(maximumFee),
+            maximumFee: maximumFee === "" ? null : Number(maximumFee),
+            allDayRate,
+            maximumFeeAllDay,
+            maximumFeeDay: maximumFeeDay === "" ? null : Number(maximumFeeDay),
+            maximumFeeNight: maximumFeeNight === "" ? null : Number(maximumFeeNight),
+            maximumFeeRecurring,
+            maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
+            weekdayRates,
             budget: Number(budget),
         };
 
@@ -358,70 +420,39 @@ export function FeeCalculatorPage() {
                 </div>
 
                 <div>
-                    <label htmlFor="dayStartTime">昼料金の開始時刻</label>
-                    <input id="dayStartTime" type="time" value={dayStartTime} onChange={(event) => setDayStartTime(event.target.value)} required />
+                    <label className="ocr-toggle-row"><input type="checkbox" checked={allDayRate} onChange={(event) => setAllDayRate(event.target.checked)} />終日同じ料金</label>
                 </div>
 
-                <div>
-                    <label htmlFor="dayEndTime">昼料金の終了時刻</label>
-                    <input id="dayEndTime" type="time" value={dayEndTime} onChange={(event) => setDayEndTime(event.target.value)} required />
-                </div>
+                {!allDayRate && <>
+                    <div><label htmlFor="dayStartTime">昼料金の開始時刻</label><input id="dayStartTime" type="time" value={dayStartTime} onChange={(event) => setDayStartTime(event.target.value)} /></div>
+                    <div><label htmlFor="dayEndTime">昼料金の終了時刻</label><input id="dayEndTime" type="time" value={dayEndTime} onChange={(event) => setDayEndTime(event.target.value)} /></div>
+                </>}
+                <div><label htmlFor="dayIntervalMinutes">{allDayRate ? "終日" : "昼"}料金の単位時間（分）</label><input id="dayIntervalMinutes" type="number" min="1" value={dayIntervalMinutes} onChange={(event) => setDayIntervalMinutes(event.target.value)} /></div>
+                <div><label htmlFor="dayPrice">{allDayRate ? "終日" : "昼"}料金（円）</label><input id="dayPrice" type="number" min="0" value={dayPrice} onChange={(event) => setDayPrice(event.target.value)} /></div>
 
-                <div>
-                    <label htmlFor="dayIntervalMinutes">昼料金の単位時間（分）</label>
-                    <input id="dayIntervalMinutes" type="number" min="1" value={dayIntervalMinutes} onChange={(event) => setDayIntervalMinutes(event.target.value)} required />
-                </div>
+                {!allDayRate && <>
+                    <div><label htmlFor="nightStartTime">夜料金の開始時刻</label><input id="nightStartTime" type="time" value={nightStartTime} onChange={(event) => setNightStartTime(event.target.value)} /></div>
+                    <div><label htmlFor="nightEndTime">夜料金の終了時刻</label><input id="nightEndTime" type="time" value={nightEndTime} onChange={(event) => setNightEndTime(event.target.value)} /></div>
+                    <div><label htmlFor="nightIntervalMinutes">夜料金の単位時間（分）</label><input id="nightIntervalMinutes" type="number" min="1" value={nightIntervalMinutes} onChange={(event) => setNightIntervalMinutes(event.target.value)} /></div>
+                    <div><label htmlFor="nightPrice">夜料金（円）</label><input id="nightPrice" type="number" min="0" value={nightPrice} onChange={(event) => setNightPrice(event.target.value)} /></div>
+                </>}
 
-                <div>
-                    <label htmlFor="dayPrice">昼料金（円）</label>
-                    <input
-                        id="dayPrice"
-                        type="number"
-                        min="0"
-                        value={dayPrice}
-                        onChange={(event) => setDayPrice(event.target.value)}
-                        required
-                    />
-                </div>
+                <fieldset className="ocr-review-group">
+                    <legend>最大料金</legend>
+                    <label className="ocr-toggle-row"><input type="checkbox" checked={maximumFeeRecurring} onChange={(event) => setMaximumFeeRecurring(event.target.checked)} />最大料金を繰り返し適用</label>
+                    {maximumFeeRecurring && <label>繰り返し期間（時間）<input type="number" min="1" value={maximumFeePeriodHours} onChange={(event) => setMaximumFeePeriodHours(event.target.value)} /></label>}
+                    <label className="ocr-toggle-row"><input type="checkbox" checked={maximumFeeAllDay} onChange={(event) => setMaximumFeeAllDay(event.target.checked)} />最大料金は終日共通</label>
+                    {maximumFeeAllDay
+                        ? <label htmlFor="maximumFee">最大料金（円・空欄は上限なし）<input id="maximumFee" type="number" min="0" value={maximumFee ?? ""} onChange={(event) => setMaximumFee(event.target.value)} placeholder="上限なし" /></label>
+                        : <div className="ocr-review-grid"><label>昼間の最大料金（円）<input type="number" min="0" value={maximumFeeDay} onChange={(event) => setMaximumFeeDay(event.target.value)} placeholder="上限なし" /></label><label>夜間の最大料金（円）<input type="number" min="0" value={maximumFeeNight} onChange={(event) => setMaximumFeeNight(event.target.value)} placeholder="上限なし" /></label></div>}
+                </fieldset>
 
-                <div>
-                    <label htmlFor="nightStartTime">夜料金の開始時刻</label>
-                    <input id="nightStartTime" type="time" value={nightStartTime} onChange={(event) => setNightStartTime(event.target.value)} required />
-                </div>
-
-                <div>
-                    <label htmlFor="nightEndTime">夜料金の終了時刻</label>
-                    <input id="nightEndTime" type="time" value={nightEndTime} onChange={(event) => setNightEndTime(event.target.value)} required />
-                </div>
-
-                <div>
-                    <label htmlFor="nightIntervalMinutes">夜料金の単位時間（分）</label>
-                    <input id="nightIntervalMinutes" type="number" min="1" value={nightIntervalMinutes} onChange={(event) => setNightIntervalMinutes(event.target.value)} required />
-                </div>
-
-                <div>
-                    <label htmlFor="nightPrice">夜料金（円）</label>
-                    <input
-                        id="nightPrice"
-                        type="number"
-                        min="0"
-                        value={nightPrice}
-                        onChange={(event) => setNightPrice(event.target.value)}
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="maximumFee">最大料金（円・ない場合は0）</label>
-                    <input
-                        id="maximumFee"
-                        type="number"
-                        min="0"
-                        value={maximumFee}
-                        onChange={(event) => setMaximumFee(event.target.value)}
-                        required
-                    />
-                </div>
+                <fieldset className="ocr-review-group">
+                    <legend>曜日別料金（空欄は基本料金）</legend>
+                    <div className="ocr-weekday-rate-list">
+                        {["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => <div className="ocr-weekday-rate-row" key={label}><b>{label}曜日</b><label>昼<input type="number" min="0" value={weekdayRates[weekday]?.dayPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], dayPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>{!allDayRate && <label>夜<input type="number" min="0" value={weekdayRates[weekday]?.nightPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], nightPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>}</div>)}
+                    </div>
+                </fieldset>
 
                 <div>
                     <label htmlFor="budget">予算額（円・設定しない場合は0）</label>
@@ -451,7 +482,7 @@ export function FeeCalculatorPage() {
                     {result.dayMinutes > 0 && (
                         <>
                             <p>昼間の駐車時間：{result.dayMinutes}分</p>
-                            <p>昼料金：{result.dayFee.toLocaleString()}円</p>
+                            <p>{allDayRate ? "終日料金" : "昼料金"}：{result.dayFee.toLocaleString()}円</p>
                         </>
                     )}
 

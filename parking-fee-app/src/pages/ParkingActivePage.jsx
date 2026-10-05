@@ -84,6 +84,13 @@ export function ParkingActivePage() {
         nightStartTime: session.nightStartTime || "20:00",
         nightEndTime: session.nightEndTime || "08:00",
         nightIntervalMinutes: session.nightIntervalMinutes || 60,
+        allDayRate: Boolean(session.allDayRate),
+        maximumFeeAllDay: session.maximumFeeAllDay !== false,
+        maximumFeeDay: session.maximumFeeDay,
+        maximumFeeNight: session.maximumFeeNight,
+        maximumFeeRecurring: Boolean(session.maximumFeeRecurring),
+        maximumFeePeriodHours: session.maximumFeePeriodHours || 24,
+        weekdayRates: session.weekdayRates || {},
     };
 
     // 現在時点の料金計算
@@ -109,6 +116,8 @@ export function ParkingActivePage() {
         targetFee: Number(session.budget),
     });
 
+    const maximumFeeTarget = [session.maximumFee, session.maximumFeeDay, session.maximumFeeNight]
+        .map(Number).filter((value) => value > 0).sort((left, right) => left - right)[0] || 0;
     const maximumFeeReachedAt = findTimeReachingFee({
         ...sessionFeeSettings,
         startTime: session.startTime,
@@ -116,7 +125,7 @@ export function ParkingActivePage() {
         dayPrice: session.dayPrice,
         nightPrice: session.nightPrice,
         maximumFee: session.maximumFee,
-        targetFee: Number(session.maximumFee),
+        targetFee: maximumFeeTarget,
     });
 
     const nextRateChange = getNextFeeChangeTime({
@@ -207,14 +216,12 @@ export function ParkingActivePage() {
             </div>
 
             {/* 次のイベントアラート */}
-            <div className="timeline-alert-box">
+            {nextRateChange && <div className="timeline-alert-box">
                 <span style={{ fontSize: "20px" }}>⏱️</span>
                 <div>
                     <strong>
                         あと {minutesToRateChange} 分で
-                        {hour >= 8 && hour < 20
-                            ? "夜間料金（60分100円）"
-                            : "昼料金（30分200円）"}
+                            料金区分
                         に切り替わります
                     </strong>
                     <div style={{ fontSize: "12px", color: "#555" }}>
@@ -225,7 +232,7 @@ export function ParkingActivePage() {
                         })}
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* 予測タイムライン */}
             <section className="result-card">
@@ -244,7 +251,7 @@ export function ParkingActivePage() {
                         </div>
                     </li>
 
-                    <li className="timeline-item next">
+                    {nextRateChange && <li className="timeline-item next">
                         <span className="timeline-badge">•</span>
                         <div className="timeline-content">
                             <strong>料金帯の切り替え</strong>（
@@ -253,11 +260,9 @@ export function ParkingActivePage() {
                                 minute: "2-digit",
                             })}
                             ）:{" "}
-                            {hour >= 8 && hour < 20
-                                ? "夜間料金に切り替わります"
-                                : "昼間料金に切り替わります"}
+                            料金区分が切り替わります
                         </div>
-                    </li>
+                    </li>}
 
                     {maximumFeeReachedAt && (
                         <li className="timeline-item">
@@ -268,7 +273,7 @@ export function ParkingActivePage() {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                 })}
-                                ）: 上限 ¥{session.maximumFee.toLocaleString()} に到達
+                                ）: 最大料金 ¥{maximumFeeTarget.toLocaleString()} に到達
                             </div>
                         </li>
                     )}

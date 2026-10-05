@@ -4,19 +4,17 @@ import { calculateParkingFee } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
 
 const REVIEW_FIELDS = [
-    { key: "dayStartTime", label: "開始時刻", type: "time", group: "昼料金" },
-    { key: "dayEndTime", label: "終了時刻", type: "time", group: "昼料金" },
-    { key: "dayIntervalMinutes", label: "単位時間（分）", type: "number", group: "昼料金" },
-    { key: "dayPriceYen", label: "単位料金（円）", type: "number", group: "昼料金" },
-    { key: "nightStartTime", label: "開始時刻", type: "time", group: "夜料金" },
-    { key: "nightEndTime", label: "終了時刻", type: "time", group: "夜料金" },
-    { key: "nightIntervalMinutes", label: "単位時間（分）", type: "number", group: "夜料金" },
-    { key: "nightPriceYen", label: "単位料金（円）", type: "number", group: "夜料金" },
-    { key: "maximumFeeYen", label: "最大料金（円、未読取/上限なしは0）", type: "number", group: "最大料金", optional: true },
-    { key: "maximumFeePeriod", label: "最大料金の適用期間", type: "text", group: "最大料金", optional: true },
+    { key: "dayStartTime", label: "開始時刻", type: "time" },
+    { key: "dayEndTime", label: "終了時刻", type: "time" },
+    { key: "dayIntervalMinutes", label: "単位時間（分）", type: "number" },
+    { key: "dayPriceYen", label: "単位料金（円）", type: "number" },
+    { key: "nightStartTime", label: "開始時刻", type: "time" },
+    { key: "nightEndTime", label: "終了時刻", type: "time" },
+    { key: "nightIntervalMinutes", label: "単位時間（分）", type: "number" },
+    { key: "nightPriceYen", label: "単位料金（円）", type: "number" },
 ];
 
-const REQUIRED_FIELDS = REVIEW_FIELDS.filter((field) => !field.optional);
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const CAMERA_GUIDE_WIDTH = 0.86;
 const CAMERA_GUIDE_HEIGHT = 0.6;
 
@@ -26,30 +24,26 @@ function isMissing(value) {
 
 function getLiveEstimate(rule, startTime, endTime) {
     if (!rule || !startTime || !endTime) return null;
-    const requiredValues = [
-        rule.dayStartTime,
-        rule.dayEndTime,
-        rule.dayIntervalMinutes,
-        rule.dayPriceYen,
-        rule.nightStartTime,
-        rule.nightEndTime,
-        rule.nightIntervalMinutes,
-        rule.nightPriceYen,
-    ];
-    if (requiredValues.some(isMissing)) return null;
 
     return calculateParkingFee({
         startTime,
         endTime,
         dayStartTime: rule.dayStartTime,
         dayEndTime: rule.dayEndTime,
-        dayIntervalMinutes: Number(rule.dayIntervalMinutes),
-        dayPrice: Number(rule.dayPriceYen),
+        dayIntervalMinutes: Number(rule.dayIntervalMinutes) || 30,
+        dayPrice: Number(rule.dayPriceYen) || 0,
         nightStartTime: rule.nightStartTime,
         nightEndTime: rule.nightEndTime,
-        nightIntervalMinutes: Number(rule.nightIntervalMinutes),
-        nightPrice: Number(rule.nightPriceYen),
-        maximumFee: Number(rule.maximumFeeYen ?? 0),
+        nightIntervalMinutes: Number(rule.nightIntervalMinutes) || 60,
+        nightPrice: Number(rule.nightPriceYen) || 0,
+        maximumFee: rule.maximumFeeYen === "" ? null : rule.maximumFeeYen,
+        maximumFeeAllDay: rule.maximumFeeAllDay,
+        maximumFeeDay: rule.maximumFeeDayYen,
+        maximumFeeNight: rule.maximumFeeNightYen,
+        maximumFeeRecurring: rule.maximumFeeRecurring,
+        maximumFeePeriodHours: Number(rule.maximumFeePeriodHours) || 24,
+        allDayRate: rule.allDayRate,
+        weekdayRates: rule.weekdayRates,
     });
 }
 
@@ -72,7 +66,6 @@ export function PhotoOcrPage() {
     const [reviewData, setReviewData] = useState(null);
     const [rawText, setRawText] = useState("");
     const [pageStep, setPageStep] = useState("capture");
-    const [isEditingRates, setIsEditingRates] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [message, setMessage] = useState("");
     const [timeMode, setTimeMode] = useState("specified");
@@ -203,7 +196,6 @@ export function PhotoOcrPage() {
         setPreviewUrl(URL.createObjectURL(file));
         setReviewData(null);
         setRawText("");
-        setIsEditingRates(false);
         setCalculationResult(null);
         setSavedRule(null);
         setCameraError("");
@@ -224,7 +216,14 @@ export function PhotoOcrPage() {
             const response = await fetch("/api/ocr/extract", { method: "POST", body: formData });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || "画像を解析できませんでした。");
-            setReviewData(result.rule);
+            setReviewData({
+                maximumFeeRecurring: false,
+                maximumFeeAllDay: true,
+                allDayRate: false,
+                maximumFeePeriodHours: 24,
+                weekdayRates: {},
+                ...result.rule,
+            });
             setRawText(result.rawText || "");
             setPageStep("result");
         } catch (error) {
@@ -247,12 +246,25 @@ export function PhotoOcrPage() {
         setCalculationResult(null);
     }
 
+    function handleWeekdayRateChange(weekday, period, value) {
+        setReviewData((current) => ({
+            ...current,
+            weekdayRates: {
+                ...(current.weekdayRates || {}),
+                [weekday]: {
+                    ...(current.weekdayRates?.[weekday] || {}),
+                    [period === "day" ? "dayPrice" : "nightPrice"]: value === "" ? null : Number(value),
+                },
+            },
+        }));
+        setCalculationResult(null);
+    }
+
     function handleRemoveImage() {
         setSelectedFile(null);
         setPreviewUrl("");
         setReviewData(null);
         setRawText("");
-        setIsEditingRates(false);
         setCalculationResult(null);
         setSavedRule(null);
         setMessage("");
@@ -261,15 +273,22 @@ export function PhotoOcrPage() {
 
     function handleCalculateFee(event) {
         event.preventDefault();
-        const missing = REQUIRED_FIELDS.filter((field) => isMissing(reviewData[field.key]));
-        const numericFields = ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
-        const invalidNumber = numericFields.some((key) => !Number.isFinite(reviewData[key]) || reviewData[key] < 0);
-        const invalidMaximumFee = !isMissing(reviewData.maximumFeeYen)
-            && (!Number.isFinite(reviewData.maximumFeeYen) || reviewData.maximumFeeYen < 0);
-        const invalidTime = ["dayStartTime", "dayEndTime", "nightStartTime", "nightEndTime"]
-            .some((key) => !/^\d{2}:\d{2}$/.test(reviewData[key] || ""));
-        if (missing.length || invalidNumber || invalidMaximumFee || invalidTime || reviewData.dayIntervalMinutes < 1 || reviewData.nightIntervalMinutes < 1) {
-            setMessage("赤く表示された項目を確認してください。単位時間は1分以上、料金は0円以上で入力してください。");
+        const numericFields = ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen", "maximumFeeYen", "maximumFeeDayYen", "maximumFeeNightYen"];
+        const invalidNumber = numericFields.some((key) => !isMissing(reviewData[key])
+            && (!Number.isFinite(Number(reviewData[key])) || Number(reviewData[key]) < 0));
+        const requiredRateFields = reviewData.allDayRate
+            ? ["dayIntervalMinutes", "dayPriceYen"]
+            : ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
+        const missingRateNumber = requiredRateFields.some((key) => isMissing(reviewData[key]));
+        const invalidInterval = requiredRateFields
+            .filter((key) => key.endsWith("IntervalMinutes"))
+            .some((key) => Number(reviewData[key]) <= 0);
+        if (missingRateNumber) {
+            setMessage("計算できません。料金と単位時間の数値を入力してください。");
+            return;
+        }
+        if (invalidNumber || invalidInterval) {
+            setMessage("料金は0以上、単位時間は1以上の数値を入力してください。");
             return;
         }
         const calculationStartTime = timeMode === "duration" ? durationStartTime : parkingStartTime;
@@ -286,13 +305,20 @@ export function PhotoOcrPage() {
             endTime: calculationEndTime,
             dayStartTime: reviewData.dayStartTime,
             dayEndTime: reviewData.dayEndTime,
-            dayIntervalMinutes: reviewData.dayIntervalMinutes,
-            dayPrice: reviewData.dayPriceYen,
+            dayIntervalMinutes: Number(reviewData.dayIntervalMinutes) || 30,
+            dayPrice: Number(reviewData.dayPriceYen) || 0,
             nightStartTime: reviewData.nightStartTime,
             nightEndTime: reviewData.nightEndTime,
-            nightIntervalMinutes: reviewData.nightIntervalMinutes,
-            nightPrice: reviewData.nightPriceYen,
-            maximumFee: Number(reviewData.maximumFeeYen ?? 0),
+            nightIntervalMinutes: Number(reviewData.nightIntervalMinutes) || 60,
+            nightPrice: Number(reviewData.nightPriceYen) || 0,
+            maximumFee: reviewData.maximumFeeYen === "" ? null : reviewData.maximumFeeYen,
+            maximumFeeAllDay: reviewData.maximumFeeAllDay,
+            maximumFeeDay: reviewData.maximumFeeDayYen,
+            maximumFeeNight: reviewData.maximumFeeNightYen,
+            maximumFeeRecurring: reviewData.maximumFeeRecurring,
+            maximumFeePeriodHours: Number(reviewData.maximumFeePeriodHours) || 24,
+            allDayRate: reviewData.allDayRate,
+            weekdayRates: reviewData.weekdayRates,
         });
         if (calculation.error) {
             setMessage(calculation.error);
@@ -303,9 +329,11 @@ export function PhotoOcrPage() {
             ...reviewData,
             id: savedRule?.id || crypto.randomUUID(),
             name: "料金表から読み取ったルール",
-            dayPrice: reviewData.dayPriceYen,
-            nightPrice: reviewData.nightPriceYen,
-            maximumFee: Number(reviewData.maximumFeeYen ?? 0),
+            dayPrice: Number(reviewData.dayPriceYen) || 0,
+            nightPrice: Number(reviewData.nightPriceYen) || 0,
+            maximumFee: reviewData.maximumFeeYen === "" ? null : reviewData.maximumFeeYen,
+            maximumFeeDay: reviewData.maximumFeeDayYen,
+            maximumFeeNight: reviewData.maximumFeeNightYen,
         };
 
         try {
@@ -324,28 +352,25 @@ export function PhotoOcrPage() {
         }
     }
 
-    const missingCount = reviewData
-        ? REQUIRED_FIELDS.filter((field) => isMissing(reviewData[field.key])).length
-        : 0;
     const liveStartTime = timeMode === "duration" ? durationStartTime : parkingStartTime;
     const liveEndTime = timeMode === "duration"
         ? toLocalDateTimeValue(new Date(new Date(durationStartTime).getTime() + Number(durationMinutes) * 60000))
         : parkingEndTime;
     const liveEstimate = getLiveEstimate(reviewData, liveStartTime, liveEndTime);
-    const maximumFeeMissing = isMissing(reviewData?.maximumFeeYen);
-    const hasAnyReadFee = reviewData && [reviewData.dayPriceYen, reviewData.nightPriceYen, reviewData.maximumFeeYen]
-        .some((value) => !isMissing(value));
+    const maximumFeeMissing = reviewData && (reviewData.maximumFeeAllDay
+        ? isMissing(reviewData.maximumFeeYen)
+        : isMissing(reviewData.maximumFeeDayYen) && isMissing(reviewData.maximumFeeNightYen));
     const rateRows = reviewData ? [
         {
             key: "day",
-            label: "昼料金",
+            label: reviewData.allDayRate ? "終日料金" : "昼料金",
             duration: reviewData.dayIntervalMinutes,
             amount: reviewData.dayPriceYen,
             period: reviewData.dayStartTime && reviewData.dayEndTime
                 ? `${reviewData.dayStartTime}〜${reviewData.dayEndTime}`
                 : "",
         },
-        {
+        ...(!reviewData.allDayRate ? [{
             key: "night",
             label: "夜料金",
             duration: reviewData.nightIntervalMinutes,
@@ -353,14 +378,13 @@ export function PhotoOcrPage() {
             period: reviewData.nightStartTime && reviewData.nightEndTime
                 ? `${reviewData.nightStartTime}〜${reviewData.nightEndTime}`
                 : "",
-        },
-        {
-            key: "maximum",
-            label: reviewData.maximumFeePeriod || "最大料金",
-            duration: "",
-            amount: reviewData.maximumFeeYen,
-            period: "",
-        },
+        }] : []),
+        ...(reviewData.maximumFeeAllDay
+            ? [{ key: "maximum", label: reviewData.maximumFeePeriod || "最大料金", duration: "", amount: reviewData.maximumFeeYen, period: "" }]
+            : [
+                { key: "maximum-day", label: "昼間最大料金", duration: "", amount: reviewData.maximumFeeDayYen, period: "" },
+                { key: "maximum-night", label: "夜間最大料金", duration: "", amount: reviewData.maximumFeeNightYen, period: "" },
+            ]),
     ].filter((row) => !isMissing(row.amount)) : [];
     const estimatedParkingMinutes = Math.max(0, Math.round(
         (new Date(liveEndTime).getTime() - new Date(liveStartTime).getTime()) / 60000
@@ -399,6 +423,7 @@ export function PhotoOcrPage() {
                 <section className="ocr-processing-page" role="status" aria-live="polite">
                     <span className="ocr-loading-spinner" aria-hidden="true" />
                     <p>AIが画像を読み込んでいます…</p>
+                    <p>※この処理には長時間かかる場合があります。</p>
                 </section>
             )}
 
@@ -426,35 +451,82 @@ export function PhotoOcrPage() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直すか、下の修正から入力してください。</p>
+                            <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直すか、下の入力欄から入力してください。</p>
                         )}
 
-                        <button type="button" className="ocr-edit-link" onClick={() => setIsEditingRates((editing) => !editing)}>
-                            {isEditingRates ? "修正を閉じる" : "料金を読み取った内容を修正する"}
-                        </button>
+                        <div className="ocr-rate-editor">
+                            <fieldset className="ocr-review-group">
+                                <legend>基本料金</legend>
+                                <label className="ocr-toggle-row">
+                                    <input type="checkbox" checked={Boolean(reviewData.allDayRate)} onChange={(event) => setReviewData((current) => ({ ...current, allDayRate: event.target.checked }))} />
+                                    終日同じ料金
+                                </label>
+                                <div className="ocr-review-grid">
+                                    {(reviewData.allDayRate
+                                        ? REVIEW_FIELDS.filter((field) => field.key === "dayIntervalMinutes" || field.key === "dayPriceYen")
+                                        : REVIEW_FIELDS.filter((field) => field.key.startsWith("day"))
+                                    ).map((field) => (
+                                        <label className="ocr-review-field" key={field.key}>
+                                            <span>{reviewData.allDayRate && field.key === "dayPriceYen" ? "終日料金（円）" : field.label}</span>
+                                            <input type={field.type} min={field.type === "number" ? 0 : undefined} step="1" value={reviewData[field.key] ?? ""} onChange={(event) => handleFieldChange(field.key, event.target.value, field.type)} placeholder="未入力" />
+                                        </label>
+                                    ))}
+                                    {!reviewData.allDayRate && REVIEW_FIELDS.filter((field) => field.key.startsWith("night")).map((field) => (
+                                        <label className="ocr-review-field" key={field.key}>
+                                            <span>{field.label}</span>
+                                            <input type={field.type} min={field.type === "number" ? 0 : undefined} step="1" value={reviewData[field.key] ?? ""} onChange={(event) => handleFieldChange(field.key, event.target.value, field.type)} placeholder="未入力" />
+                                        </label>
+                                    ))}
+                                </div>
+                            </fieldset>
 
-                        {isEditingRates && (
-                            <div className="ocr-rate-editor">
-                                {missingCount > 0 && <strong className="ocr-missing-count">未読取 {missingCount}項目</strong>}
-                                {["昼料金", "夜料金", "最大料金"].map((group) => (
-                                    <fieldset className="ocr-review-group" key={group}>
-                                        <legend>{group}</legend>
-                                        <div className="ocr-review-grid">
-                                            {REVIEW_FIELDS.filter((field) => field.group === group).map((field) => {
-                                                const missing = !field.optional && isMissing(reviewData[field.key]);
-                                                return (
-                                                    <label className={`ocr-review-field ${missing ? "is-missing" : ""}`} key={field.key}>
-                                                        <span>{field.label}{missing && <b>未読取・入力してください</b>}</span>
-                                                        <input type={field.type} min={field.type === "number" ? 0 : undefined} step="1" value={reviewData[field.key] ?? ""} onChange={(event) => handleFieldChange(field.key, event.target.value, field.type)} placeholder={field.optional ? "任意" : "未読取"} aria-invalid={missing} />
-                                                    </label>
-                                                );
-                                            })}
+                            <fieldset className="ocr-review-group">
+                                <legend>最大料金</legend>
+                                <label className="ocr-toggle-row">
+                                    <input type="checkbox" checked={Boolean(reviewData.maximumFeeRecurring)} onChange={(event) => setReviewData((current) => ({ ...current, maximumFeeRecurring: event.target.checked }))} />
+                                    最大料金を繰り返し適用
+                                </label>
+                                {reviewData.maximumFeeRecurring && (
+                                    <label className="ocr-review-field ocr-max-period">
+                                        <span>繰り返し期間（時間）</span>
+                                        <input type="number" min="1" value={reviewData.maximumFeePeriodHours ?? 24} onChange={(event) => handleFieldChange("maximumFeePeriodHours", event.target.value, "number")} />
+                                    </label>
+                                )}
+                                <label className="ocr-toggle-row">
+                                    <input type="checkbox" checked={Boolean(reviewData.maximumFeeAllDay)} onChange={(event) => setReviewData((current) => ({ ...current, maximumFeeAllDay: event.target.checked }))} />
+                                    最大料金は終日共通
+                                </label>
+                                <div className="ocr-review-grid">
+                                    {(reviewData.maximumFeeAllDay
+                                        ? [{ key: "maximumFeeYen", label: "最大料金（円）" }]
+                                        : [{ key: "maximumFeeDayYen", label: "昼間の最大料金（円）" }, { key: "maximumFeeNightYen", label: "夜間の最大料金（円）" }]
+                                    ).map((field) => (
+                                        <label className="ocr-review-field" key={field.key}>
+                                            <span>{field.label}</span>
+                                            <input type="number" min="0" value={reviewData[field.key] ?? ""} onChange={(event) => handleFieldChange(field.key, event.target.value, "number")} placeholder="上限なし" />
+                                        </label>
+                                    ))}
+                                    <label className="ocr-review-field">
+                                        <span>最大料金の適用条件</span>
+                                        <input type="text" value={reviewData.maximumFeePeriod ?? ""} onChange={(event) => handleFieldChange("maximumFeePeriod", event.target.value, "text")} placeholder="例：入庫後24時間" />
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <fieldset className="ocr-review-group">
+                                <legend>曜日別料金（空欄は基本料金）</legend>
+                                <div className="ocr-weekday-rate-list">
+                                    {WEEKDAYS.map((weekday, index) => (
+                                        <div className="ocr-weekday-rate-row" key={weekday}>
+                                            <b>{weekday}曜日</b>
+                                            <label>昼<input type="number" min="0" value={reviewData.weekdayRates?.[index]?.dayPrice ?? ""} onChange={(event) => handleWeekdayRateChange(index, "day", event.target.value)} placeholder="基本料金" /></label>
+                                            {!reviewData.allDayRate && <label>夜<input type="number" min="0" value={reviewData.weekdayRates?.[index]?.nightPrice ?? ""} onChange={(event) => handleWeekdayRateChange(index, "night", event.target.value)} placeholder="基本料金" /></label>}
                                         </div>
-                                    </fieldset>
-                                ))}
-                                {rawText && <details className="ocr-raw-text"><summary>OCRで抽出した文字列</summary><pre>{rawText}</pre></details>}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            </fieldset>
+                            {rawText && <details className="ocr-raw-text"><summary>AIが読み取った文字</summary><pre>{rawText}</pre></details>}
+                        </div>
                     </div>
                     {message && <p className="error-message" role="alert">{message}</p>}
                     <button type="button" className="ocr-primary-action" onClick={() => { setMessage(""); setPageStep("time"); }}>
