@@ -6,8 +6,8 @@ import { ParkingActivePage } from "./pages/ParkingActivePage";
 import { ParkingMapPage } from "./pages/ParkingMapPage";
 import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 import { NotificationToast } from "./components/NotificationToast";
-import { PremiumPage } from "./pages/PremiumPage";
-
+import { PremiumPage } from "./pages/Premiumpage";
+import { SavedPage } from "./pages/SavedPage";
 export const IconlyCamera = ({ size = 24, color = "#000000" }) => (
   <svg
     width={size}
@@ -101,7 +101,7 @@ function App() {
               </span>
               <span>撮影</span>
             </NavLink>
-            <NavLink to="/calculator" className="bottom-navigation-item">
+            <NavLink to="/saved" className="bottom-navigation-item">
               <span className="bottom-navigation-icon"><IconlyBookmark size={28} color="currentColor" /></span>
               <span>保存</span>
             </NavLink>
@@ -115,6 +115,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/calculator" element={<FeeCalculatorPage />} />
+          <Route path="/saved" element={<SavedPage />} />
           <Route path="/parking" element={<ParkingActivePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/map" element={<ParkingMapPage />} />
