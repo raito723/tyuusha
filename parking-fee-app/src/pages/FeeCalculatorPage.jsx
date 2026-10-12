@@ -10,6 +10,12 @@ import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
 import { saveActiveSession } from "../lib/sessionStorage";
 import { notificationService } from "../lib/notificationService";
 
+function hasConfiguredWeekdayRates(rates = {}) {
+    return Object.values(rates).some((rate) =>
+        rate && [rate.dayPrice, rate.nightPrice].some((price) => price !== null && price !== undefined && price !== "")
+    );
+}
+
 export function FeeCalculatorPage() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -33,6 +39,7 @@ export function FeeCalculatorPage() {
     const [maximumFeeRecurring, setMaximumFeeRecurring] = useState(false);
     const [maximumFeePeriodHours, setMaximumFeePeriodHours] = useState(24);
     const [weekdayRates, setWeekdayRates] = useState({});
+    const [weekdayRatesEnabled, setWeekdayRatesEnabled] = useState(false);
     const [budget, setBudget] = useState(0);
     const [result, setResult] = useState(null);
     const [savedRules, setSavedRules] = useState(getParkingRules());
@@ -62,6 +69,7 @@ export function FeeCalculatorPage() {
             setMaximumFeeRecurring(Boolean(rule.maximumFeeRecurring));
             setMaximumFeePeriodHours(rule.maximumFeePeriodHours || 24);
             setWeekdayRates(rule.weekdayRates || {});
+            setWeekdayRatesEnabled(rule.weekdayRatesEnabled ?? hasConfiguredWeekdayRates(rule.weekdayRates));
         }
     }, [location.state]);
 
@@ -102,7 +110,7 @@ export function FeeCalculatorPage() {
             maximumFeeNight: maximumFeeNight === "" ? null : Number(maximumFeeNight),
             maximumFeeRecurring,
             maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
-            weekdayRates,
+            weekdayRates: weekdayRatesEnabled ? weekdayRates : {},
         };
 
         const calculationResult = calculateParkingFee(feeSettings);
@@ -137,7 +145,7 @@ export function FeeCalculatorPage() {
                 nightStartTime,
                 nightEndTime,
                 allDayRate,
-                weekdayRates,
+                weekdayRates: weekdayRatesEnabled ? weekdayRates : {},
             }),
         });
     }
@@ -237,6 +245,7 @@ export function FeeCalculatorPage() {
             maximumFeeRecurring,
             maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
             weekdayRates,
+            weekdayRatesEnabled,
         };
 
         const updatedRules = [...savedRules, newRule];
@@ -274,6 +283,7 @@ export function FeeCalculatorPage() {
         setMaximumFeeRecurring(Boolean(selectedRule.maximumFeeRecurring));
         setMaximumFeePeriodHours(selectedRule.maximumFeePeriodHours || 24);
         setWeekdayRates(selectedRule.weekdayRates || {});
+        setWeekdayRatesEnabled(selectedRule.weekdayRatesEnabled ?? hasConfiguredWeekdayRates(selectedRule.weekdayRates));
     }
 
     function handleDeleteRule() {
@@ -330,7 +340,7 @@ export function FeeCalculatorPage() {
             maximumFeeNight: maximumFeeNight === "" ? null : Number(maximumFeeNight),
             maximumFeeRecurring,
             maximumFeePeriodHours: Number(maximumFeePeriodHours) || 24,
-            weekdayRates,
+            weekdayRates: weekdayRatesEnabled ? weekdayRates : {},
             budget: Number(budget),
         };
 
@@ -448,10 +458,14 @@ export function FeeCalculatorPage() {
                 </fieldset>
 
                 <fieldset className="ocr-review-group">
-                    <legend>曜日別料金（空欄は基本料金）</legend>
-                    <div className="ocr-weekday-rate-list">
-                        {["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => <div className="ocr-weekday-rate-row" key={label}><b>{label}曜日</b><label>昼<input type="number" min="0" value={weekdayRates[weekday]?.dayPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], dayPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>{!allDayRate && <label>夜<input type="number" min="0" value={weekdayRates[weekday]?.nightPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], nightPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>}</div>)}
-                    </div>
+                    <legend>曜日別料金</legend>
+                    <label className="ocr-toggle-row"><input type="checkbox" checked={weekdayRatesEnabled} onChange={(event) => setWeekdayRatesEnabled(event.target.checked)} />曜日ごとの料金を設定する</label>
+                    {weekdayRatesEnabled && <>
+                        <p className="help-message">空欄の曜日は基本料金が適用されます。</p>
+                        <div className="ocr-weekday-rate-list">
+                            {["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => <div className="ocr-weekday-rate-row" key={label}><b>{label}曜日</b><label>昼<input type="number" min="0" value={weekdayRates[weekday]?.dayPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], dayPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>{!allDayRate && <label>夜<input type="number" min="0" value={weekdayRates[weekday]?.nightPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], nightPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>}</div>)}
+                        </div>
+                    </>}
                 </fieldset>
 
                 <div>
