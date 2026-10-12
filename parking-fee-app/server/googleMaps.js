@@ -1,3 +1,4 @@
+// Dormant Google Maps integration. Mapbox is active; re-enable the routes in index.js when API keys are available.
 const PLACES_API_ROOT = "https://places.googleapis.com/v1";
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const PARKING_SEARCH_RADIUS_METERS = 5000;

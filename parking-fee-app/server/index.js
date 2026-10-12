@@ -5,7 +5,7 @@ import helmet from "helmet";
 import multer from "multer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { computeGoogleRoute, searchGoogleNearbyParking, searchGooglePlace } from "./googleMaps.js";
+// Google Maps連携は一時停止中。実装は server/googleMaps.js に保持しています。
 
 const projectRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 dotenv.config({ path: [path.join(projectRoot, ".env.local"), path.join(projectRoot, ".env")] });
@@ -19,7 +19,7 @@ const upload = multer({
 
 app.disable("x-powered-by");
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: "32kb" }));
+// app.use(express.json({ limit: "32kb" })); // Google Maps API用。再開時に有効化します。
 
 const ocrRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -29,6 +29,7 @@ const ocrRateLimit = rateLimit({
     message: { error: "解析回数が上限に達しました。15分ほど待ってから再度お試しください。" },
 });
 
+/* Google Maps APIはキー未設定のため一時停止中です。
 const mapsRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 60,
@@ -47,6 +48,7 @@ async function handleMapsRequest(action, request, response) {
         });
     }
 }
+*/
 
 function detectImageMime(buffer) {
     if (buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return "image/png";
@@ -232,6 +234,7 @@ app.get("/api/health", (_request, response) => {
     response.json({ ok: true });
 });
 
+/* Google Maps API endpoints (一時停止中。キーを用意したら再有効化します。)
 app.post("/api/maps/parking/nearby", mapsRateLimit, (request, response) => {
     handleMapsRequest((req) => searchGoogleNearbyParking(req.body?.center), request, response);
 });
@@ -243,6 +246,7 @@ app.post("/api/maps/place", mapsRateLimit, (request, response) => {
 app.post("/api/maps/route", mapsRateLimit, (request, response) => {
     handleMapsRequest((req) => computeGoogleRoute(req.body?.origin, req.body?.destination), request, response);
 });
+*/
 
 app.post("/api/ocr/extract", ocrRateLimit, upload.single("image"), async (request, response) => {
     if (!request.file) return response.status(400).json({ error: "画像ファイルを選択してください。" });

@@ -1,3 +1,4 @@
+// Dormant Google Maps loader. The active map component currently uses Mapbox GL JS.
 let mapsPromise;
 
 export function loadGoogleMaps() {
