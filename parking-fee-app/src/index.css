@@ -6,6 +6,7 @@
   --color-highlight-deep: #b38545;
   --color-surface-soft: #eef8f5;
   --color-border: #ccf1e9;
+  --color-box-under-line: #c5cfcb;
 }
 
 * {
@@ -438,6 +439,31 @@ form div {
   gap: 6px;
 }
 
+.fee-rate-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0;
+}
+
+.fee-rate-pair label {
+  display: grid;
+  grid-template-rows: minmax(2.7em, auto) auto;
+  align-content: start;
+  min-width: 0;
+  gap: 5px;
+}
+
+.fee-rate-pair input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 10px;
+}
+
 input,
 select,
 button {
@@ -689,28 +715,46 @@ button:hover {
 
 .ocr-weekday-rate-row {
   display: grid;
-  grid-template-columns: 60px repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--color-border);
+  gap: 8px;
+  padding: 10px 0 16px;
+  border-bottom: 1px solid var(--color-box-under-line);
 }
 
 .ocr-weekday-rate-row:last-child {
   border-bottom: 0;
 }
 
+.ocr-weekday-rate-row:nth-child(7) {
+  border-bottom: 5px solid var(--color-box-under-line);
+}
+
 .ocr-weekday-rate-row label {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 13px;
+}
+
+.ocr-weekday-rate-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.weekday-rate-cap-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .ocr-weekday-rate-row input {
   width: 100%;
   min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .fee-rate-pair {
+    gap: 8px;
+  }
 }
 
 .ocr-review-grid {

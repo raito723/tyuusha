@@ -12,7 +12,15 @@ import { notificationService } from "../lib/notificationService";
 
 function hasConfiguredWeekdayRates(rates = {}) {
     return Object.values(rates).some((rate) =>
-        rate && [rate.dayPrice, rate.nightPrice].some((price) => price !== null && price !== undefined && price !== "")
+        rate && [
+            rate.dayPrice,
+            rate.nightPrice,
+            rate.dayIntervalMinutes,
+            rate.nightIntervalMinutes,
+            rate.maximumFee,
+            rate.maximumFeeDay,
+            rate.maximumFeeNight,
+        ].some((value) => value !== null && value !== undefined && value !== "")
     );
 }
 
@@ -45,6 +53,17 @@ export function FeeCalculatorPage() {
     const [savedRules, setSavedRules] = useState(getParkingRules());
     const [notificationMessage, setNotificationMessage] = useState("");
     const notificationTimerIds = useRef([]);
+
+    function handleWeekdayRateChange(dayKey, field, value) {
+        setWeekdayRates((current) => ({
+            ...current,
+            [dayKey]: {
+                ...current[dayKey],
+                [field]: value === "" ? null : Number(value),
+            },
+        }));
+        setResult(null);
+    }
 
     // マップ画面等からプリセット情報が渡された場合の自動入力
     useEffect(() => {
@@ -437,14 +456,18 @@ export function FeeCalculatorPage() {
                     <div><label htmlFor="dayStartTime">昼料金の開始時刻</label><input id="dayStartTime" type="time" value={dayStartTime} onChange={(event) => setDayStartTime(event.target.value)} /></div>
                     <div><label htmlFor="dayEndTime">昼料金の終了時刻</label><input id="dayEndTime" type="time" value={dayEndTime} onChange={(event) => setDayEndTime(event.target.value)} /></div>
                 </>}
-                <div><label htmlFor="dayIntervalMinutes">{allDayRate ? "終日" : "昼"}料金の単位時間（分）</label><input id="dayIntervalMinutes" type="number" min="1" value={dayIntervalMinutes} onChange={(event) => setDayIntervalMinutes(event.target.value)} /></div>
-                <div><label htmlFor="dayPrice">{allDayRate ? "終日" : "昼"}料金（円）</label><input id="dayPrice" type="number" min="0" value={dayPrice} onChange={(event) => setDayPrice(event.target.value)} /></div>
+                <div className="fee-rate-pair">
+                    <label htmlFor="dayIntervalMinutes">{allDayRate ? "終日" : "昼"}単位時間（分）<input id="dayIntervalMinutes" type="number" min="1" value={dayIntervalMinutes} onChange={(event) => setDayIntervalMinutes(event.target.value)} /></label>
+                    <label htmlFor="dayPrice">{allDayRate ? "終日" : "昼"}料金（円）<input id="dayPrice" type="number" min="0" value={dayPrice} onChange={(event) => setDayPrice(event.target.value)} /></label>
+                </div>
 
                 {!allDayRate && <>
                     <div><label htmlFor="nightStartTime">夜料金の開始時刻</label><input id="nightStartTime" type="time" value={nightStartTime} onChange={(event) => setNightStartTime(event.target.value)} /></div>
                     <div><label htmlFor="nightEndTime">夜料金の終了時刻</label><input id="nightEndTime" type="time" value={nightEndTime} onChange={(event) => setNightEndTime(event.target.value)} /></div>
-                    <div><label htmlFor="nightIntervalMinutes">夜料金の単位時間（分）</label><input id="nightIntervalMinutes" type="number" min="1" value={nightIntervalMinutes} onChange={(event) => setNightIntervalMinutes(event.target.value)} /></div>
-                    <div><label htmlFor="nightPrice">夜料金（円）</label><input id="nightPrice" type="number" min="0" value={nightPrice} onChange={(event) => setNightPrice(event.target.value)} /></div>
+                    <div className="fee-rate-pair">
+                        <label htmlFor="nightIntervalMinutes">夜単位時間（分）<input id="nightIntervalMinutes" type="number" min="1" value={nightIntervalMinutes} onChange={(event) => setNightIntervalMinutes(event.target.value)} /></label>
+                        <label htmlFor="nightPrice">夜料金（円）<input id="nightPrice" type="number" min="0" value={nightPrice} onChange={(event) => setNightPrice(event.target.value)} /></label>
+                    </div>
                 </>}
 
                 <fieldset className="ocr-review-group">
@@ -458,12 +481,43 @@ export function FeeCalculatorPage() {
                 </fieldset>
 
                 <fieldset className="ocr-review-group">
-                    <legend>曜日別料金</legend>
-                    <label className="ocr-toggle-row"><input type="checkbox" checked={weekdayRatesEnabled} onChange={(event) => setWeekdayRatesEnabled(event.target.checked)} />曜日ごとの料金を設定する</label>
+                    <legend>曜日別・祝日料金</legend>
+                    <label className="ocr-toggle-row"><input type="checkbox" checked={weekdayRatesEnabled} onChange={(event) => setWeekdayRatesEnabled(event.target.checked)} />曜日別・祝日料金を設定する</label>
                     {weekdayRatesEnabled && <>
-                        <p className="help-message">空欄の曜日は基本料金が適用されます。</p>
+                        <p className="help-message">料金の空欄は基本料金、最大料金の空欄は共通の最大料金が適用されます。祝日欄が空欄の場合は該当する曜日の料金を使います。</p>
                         <div className="ocr-weekday-rate-list">
-                            {["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => <div className="ocr-weekday-rate-row" key={label}><b>{label}曜日</b><label>昼<input type="number" min="0" value={weekdayRates[weekday]?.dayPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], dayPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>{!allDayRate && <label>夜<input type="number" min="0" value={weekdayRates[weekday]?.nightPrice ?? ""} onChange={(event) => setWeekdayRates((current) => ({ ...current, [weekday]: { ...current[weekday], nightPrice: event.target.value === "" ? null : Number(event.target.value) } }))} placeholder="基本料金" /></label>}</div>)}
+                            {[
+                                ...["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => ({ key: weekday, label: `${label}曜日` })),
+                                { key: "holiday", label: "祝日" },
+                            ].map(({ key, label }) => {
+                                const rate = weekdayRates[key] || {};
+                                const fallbackPlaceholder = key === "holiday" ? "曜日別料金" : "基本料金";
+                                const intervalPlaceholder = key === "holiday" ? "曜日別単位時間" : "基本単位時間";
+                                const maximumPlaceholder = key === "holiday" ? "曜日別最大料金" : "共通最大料金";
+                                return (
+                                    <div className="ocr-weekday-rate-row" key={key}>
+                                        <b>{label}</b>
+                                        <div className="ocr-weekday-rate-fields">
+                                            <div className="fee-rate-pair">
+                                                <label>{allDayRate ? "終日単位時間（分）" : "昼単位時間（分）"}<input type="number" min="1" value={rate.dayIntervalMinutes ?? ""} onChange={(event) => handleWeekdayRateChange(key, "dayIntervalMinutes", event.target.value)} placeholder={intervalPlaceholder} /></label>
+                                                <label>{allDayRate ? "終日料金（円）" : "昼料金（円）"}<input type="number" min="0" value={rate.dayPrice ?? ""} onChange={(event) => handleWeekdayRateChange(key, "dayPrice", event.target.value)} placeholder={fallbackPlaceholder} /></label>
+                                            </div>
+                                            {!allDayRate && <div className="fee-rate-pair">
+                                                <label>夜単位時間（分）<input type="number" min="1" value={rate.nightIntervalMinutes ?? ""} onChange={(event) => handleWeekdayRateChange(key, "nightIntervalMinutes", event.target.value)} placeholder={intervalPlaceholder} /></label>
+                                                <label>夜料金（円）<input type="number" min="0" value={rate.nightPrice ?? ""} onChange={(event) => handleWeekdayRateChange(key, "nightPrice", event.target.value)} placeholder={fallbackPlaceholder} /></label>
+                                            </div>}
+                                            <div className="weekday-rate-cap-fields">
+                                                {maximumFeeAllDay
+                                                    ? <label>最大料金<input type="number" min="0" value={rate.maximumFee ?? ""} onChange={(event) => handleWeekdayRateChange(key, "maximumFee", event.target.value)} placeholder={maximumPlaceholder} /></label>
+                                                    : <>
+                                                        <label>昼最大<input type="number" min="0" value={rate.maximumFeeDay ?? ""} onChange={(event) => handleWeekdayRateChange(key, "maximumFeeDay", event.target.value)} placeholder={maximumPlaceholder} /></label>
+                                                        <label>夜最大<input type="number" min="0" value={rate.maximumFeeNight ?? ""} onChange={(event) => handleWeekdayRateChange(key, "maximumFeeNight", event.target.value)} placeholder={maximumPlaceholder} /></label>
+                                                    </>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </>}
                 </fieldset>
