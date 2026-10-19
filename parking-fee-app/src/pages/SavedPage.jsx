@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FeeCalculatorPage } from "./FeeCalculatorPage";
+import heartIcon from "../assets/heart.png";
+import heartOffIcon from "../assets/heart_off.png";
 
 const HeartIcon = ({ filled = false, size = 26 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "#485D87" : "none"} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path
-            d="M12 20.2C10.2 19 3.6 14.4 3.6 9.1C3.6 6.5 5.5 4.6 7.9 4.6C9.6 4.6 11.1 5.5 12 7C12.9 5.5 14.4 4.6 16.1 4.6C18.5 4.6 20.4 6.5 20.4 9.1C20.4 14.4 13.8 19 12 20.2Z"
-            stroke="#485D87"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </svg>
+    <img src={filled ? heartIcon : heartOffIcon} width={size} height={size} alt="" aria-hidden="true" />
 );
 
 // TODO: 実データ(保存した駐車場)に置き換える
