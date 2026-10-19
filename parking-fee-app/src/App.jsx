@@ -6,8 +6,12 @@ import { ParkingActivePage } from "./pages/ParkingActivePage";
 import { ParkingMapPage } from "./pages/ParkingMapPage";
 import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 import { NotificationToast } from "./components/NotificationToast";
-import { PremiumPage } from "./pages/PremiumPage";
-
+import { PremiumPage } from "./pages/Premiumpage";
+import { SavedPage } from "./pages/SavedPage";
+import homeIcon from "./assets/home.png";
+import pinIcon from "./assets/pin.png";
+import pinOffIcon from "./assets/pin_off.png";
+import cameraIcon from "./assets/camera.png";
 export const IconlyCamera = ({ size = 24, color = "#000000" }) => (
   <svg
     width={size}
@@ -88,20 +92,26 @@ function App() {
 
           <nav className="bottom-navigation" aria-label="メインメニュー">
             <NavLink to="/" end className="bottom-navigation-item">
-              <span className="bottom-navigation-icon"><IconlyHome size={28} color="currentColor" /></span>
+              <span className="bottom-navigation-icon"><img src={homeIcon} alt="" aria-hidden="true" /></span>
               <span>ホーム</span>
             </NavLink>
             <NavLink to="/map" className="bottom-navigation-item">
-              <span className="bottom-navigation-icon"><IconlyLocation size={28} color="currentColor" /></span>
-              <span>マップ</span>
+              {({ isActive }) => (
+                <>
+                  <span className="bottom-navigation-icon">
+                    <img src={isActive ? pinIcon : pinOffIcon} alt="" aria-hidden="true" />
+                  </span>
+                  <span>マップ</span>
+                </>
+              )}
             </NavLink>
             <NavLink to="/ocr" className="bottom-navigation-item bottom-navigation-camera">
               <span className="bottom-navigation-camera-button">
-                <IconlyCamera size={26} color="#06372f" />
+                <img src={cameraIcon} alt="" aria-hidden="true" />
               </span>
               <span>撮影</span>
             </NavLink>
-            <NavLink to="/calculator" className="bottom-navigation-item">
+            <NavLink to="/saved" className="bottom-navigation-item">
               <span className="bottom-navigation-icon"><IconlyBookmark size={28} color="currentColor" /></span>
               <span>保存</span>
             </NavLink>
@@ -115,6 +125,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/calculator" element={<FeeCalculatorPage />} />
+          <Route path="/saved" element={<SavedPage />} />
           <Route path="/parking" element={<ParkingActivePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/map" element={<ParkingMapPage />} />

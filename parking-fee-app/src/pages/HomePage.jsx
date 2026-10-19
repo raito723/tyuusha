@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { IconlyCamera, IconlyLocation } from "../App";
+import pinIcon from "../assets/pin.png";
 export const IconlyTicketStar = ({ size = 24, color = "#415E8A" }) => {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -12,19 +12,19 @@ export function HomePage() {
     return (
         <section className="home-page">
             <div className="home-map-preview" aria-label="現在地周辺の地図">
-                <span className="home-map-marker" aria-hidden="true" />
+                <img className="home-map-marker" src={pinIcon} alt="" aria-hidden="true" />
                 <span className="home-map-road home-map-road-one" aria-hidden="true" />
                 <span className="home-map-road home-map-road-two" aria-hidden="true" />
             </div>
 
             <div className="home-actions">
                 <Link to="/map" className="home-action home-action-primary">
-                    <span className="home-action-icon" aria-hidden="true"><IconlyLocation size={36} color="currentColor" /></span>
+                    <span className="home-action-icon" aria-hidden="true"><img src={pinIcon} alt="" /></span>
                     <span>現在地周辺の<br />駐車場を探す</span>
                     <span className="home-action-arrow" aria-hidden="true">›</span>
                 </Link>
                 <Link to="/ocr" className="home-action home-action-outline">
-                    <span className="home-action-icon" aria-hidden="true"><IconlyCamera size={36} color="currentColor" /></span>
+                    <span className="home-action-icon home-action-camera" aria-hidden="true" />
                     <span>料金表を撮影して<br />料金を計算する</span>
                     <span className="home-action-arrow" aria-hidden="true">›</span>
                 </Link>
