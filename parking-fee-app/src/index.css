@@ -224,87 +224,209 @@ header h1 {
 }
 
 .premium-page {
+  position: relative;
+  isolation: isolate;
   display: flex;
   min-height: calc(100dvh - 82px);
   flex-direction: column;
   align-items: center;
-  /* main の左右 padding(24px) を打ち消す */
   margin: 0 -24px -150px;
-  /* 下の余白(150px)ぶんも背景で埋める。固定ナビに隠れないよう内側にも確保 */
-  padding: 56px 24px 190px;
-  background: var(--color-premium-bg);
+  overflow: hidden;
+  padding: 66px 18px 190px;
+  border-top: 3px solid var(--color-primary);
+  background: #ffffff;
   color: var(--color-premium-navy);
-  /* 背景を画面の左右いっぱいまで広げる */
-  box-shadow: 0 0 0 100vmax var(--color-premium-bg);
-  clip-path: inset(0 -100vmax);
+}
+
+.premium-page::before,
+.premium-page::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.premium-page::before {
+  inset: 0 0 auto;
+  height: 72%;
+  background: var(--color-premium-bg);
+}
+
+.premium-page::after {
+  right: -22%;
+  bottom: 24%;
+  left: -22%;
+  height: 29%;
+  border-radius: 50% 50% 0 0 / 24% 24% 0 0;
+  background: #ffffff;
+  transform: rotate(-7deg);
+}
+
+.premium-decorations {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.premium-decoration {
+  position: absolute;
+  display: block;
+  border: 3px solid var(--color-premium-gold);
+}
+
+.premium-decoration-triangle {
+  top: 38px;
+  left: 21%;
+  width: 18px;
+  height: 18px;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.premium-decoration-circle {
+  top: 8px;
+  right: 30%;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+}
+
+.premium-decoration-square {
+  top: 154px;
+  left: 5%;
+  width: 28px;
+  height: 28px;
+  transform: rotate(-14deg);
+}
+
+.premium-decoration-circle-small {
+  top: 38%;
+  right: 24%;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.premium-decoration-triangle-small {
+  top: 47%;
+  right: 12%;
+  width: 16px;
+  height: 16px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.premium-decoration-square-small {
+  top: 115px;
+  right: 6%;
+  width: 23px;
+  height: 23px;
+  transform: rotate(12deg);
 }
 
 .premium-hero {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 390px);
   text-align: center;
 }
 
 .premium-title {
-  margin: 0;
-  font-size: 30px;
+  margin: 2px 0 0;
+  font-size: clamp(28px, 7.5vw, 36px);
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.3;
 }
 
 .premium-catch {
-  margin: 8px 0 0;
-  font-size: 19px;
+  margin: 0;
+  font-size: clamp(15px, 4.2vw, 19px);
   font-weight: 700;
   line-height: 1.5;
 }
 
+.premium-subtitle {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .premium-price {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  width: min(100%, 390px);
+  margin-top: 24px;
+  padding: 9px 14px 11px;
+  border: 2px solid var(--color-premium-gold);
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.premium-price-monthly {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 8px;
-  width: min(100%, 360px);
-  margin-top: 28px;
-  padding: 16px 20px;
-  border: 2px solid var(--color-premium-gold);
-  border-radius: 20px;
-  background: #ffffff;
 }
 
 .premium-price-label,
 .premium-price-amount {
-  font-size: 26px;
+  font-size: 25px;
   font-weight: 800;
 }
 
 .premium-price-tax {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+}
+
+.premium-free-trial {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.premium-free-trial strong {
+  font-size: 30px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .premium-benefits {
   display: grid;
   gap: 24px;
-  width: min(100%, 360px);
-  margin: 40px 0 0;
+  width: min(100%, 390px);
+  margin: 16px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .premium-benefit {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 16px;
 }
 
 .premium-benefit-check {
   display: grid;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border-radius: 50%;
   background: var(--color-premium-gold);
+}
+
+.premium-benefit-check svg {
+  width: 23px;
+  height: 23px;
 }
 
 .premium-benefit-text {
@@ -314,27 +436,29 @@ header h1 {
 }
 
 .premium-benefit-text strong {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
 }
 
 .premium-benefit-text span {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .premium-actions {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: 12px;
-  width: min(100%, 360px);
-  margin-top: 40px;
+  gap: 13px;
+  width: min(100%, 400px);
+  margin-top: 50px;
 }
 
 .premium-join-button,
 .premium-detail-button {
-  min-height: 56px;
-  border-radius: 16px;
-  font-size: 15px;
+  min-height: 70px;
+  border-radius: 18px;
+  font-size: 17px;
   font-weight: 700;
 }
 

@@ -27,15 +27,27 @@ export function PremiumPage() {
 
     return (
         <section className="premium-page" aria-labelledby="premium-title">
+            <div className="premium-decorations" aria-hidden="true">
+                <span className="premium-decoration premium-decoration-triangle" />
+                <span className="premium-decoration premium-decoration-circle" />
+                <span className="premium-decoration premium-decoration-square" />
+                <span className="premium-decoration premium-decoration-circle-small" />
+                <span className="premium-decoration premium-decoration-triangle-small" />
+                <span className="premium-decoration premium-decoration-square-small" />
+            </div>
             <div className="premium-hero">
+                <p className="premium-catch">もっとお得に＆もっと便利にするなら</p>
                 <h2 id="premium-title" className="premium-title">プレミアムプラン</h2>
-                <p className="premium-catch">もっとお得に、もっと便利に。</p>
+                <p className="premium-subtitle">始めてみませんか？</p>
             </div>
 
-            <div className="premium-price" aria-label="月額480円（税込）">
-                <span className="premium-price-label">月額</span>
-                <strong className="premium-price-amount">480円</strong>
-                <small className="premium-price-tax">（税込）</small>
+            <div className="premium-price" aria-label="月額480円（税込）、初めての方は1ヶ月無料">
+                <div className="premium-price-monthly">
+                    <span className="premium-price-label">月額</span>
+                    <strong className="premium-price-amount">480円</strong>
+                    <small className="premium-price-tax">（税込）</small>
+                </div>
+                <p className="premium-free-trial">初めての方は<strong>1ヶ月無料</strong></p>
             </div>
 
             <ul className="premium-benefits">
