@@ -846,6 +846,29 @@ button:hover {
   accent-color: var(--color-primary);
 }
 
+.weekday-rate-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 280ms ease, opacity 220ms ease;
+}
+
+.weekday-rate-expand.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.weekday-rate-expand-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekday-rate-expand {
+    transition: none;
+  }
+}
+
 .ocr-max-period {
   max-width: 240px;
   margin-bottom: 14px;
@@ -1953,4 +1976,624 @@ button:hover {
 .custom-leaflet-pin {
   background: transparent !important;
   border: none !important;
+}
+
+/* Map screen: fixed map area with a separately scrollable result sheet. */
+main:has(.map-page-container) {
+  width: min(100%, 720px);
+  max-width: none;
+  height: 100dvh;
+  padding: 0 0 calc(86px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.map-page-container {
+  display: grid;
+  grid-template-rows: 42px 44px minmax(180px, 1fr) minmax(170px, 28dvh);
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: max(10px, env(safe-area-inset-top)) 16px 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.map-page-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-page-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.map-back-button {
+  width: 32px;
+  height: 36px;
+  font-size: 30px;
+}
+
+.map-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.map-search-row input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 22px;
+  background: #ffffff;
+  color: var(--color-text);
+  font: inherit;
+}
+
+.map-search-row>button {
+  min-width: 76px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 22px;
+  background: #ffffff;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.map-search-row>.map-current-location {
+  display: none;
+}
+
+.map-inline-error {
+  position: absolute;
+  z-index: 5;
+  top: 112px;
+  left: 20px;
+  right: 20px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff8f2;
+  color: #8b3b13;
+  font-size: 12px;
+}
+
+.map-view-pane {
+  position: relative;
+  min-height: 0;
+  height: auto;
+  margin: 0 -16px;
+  overflow: hidden;
+  background: #d8d8d8;
+}
+
+.parking-map-shell,
+.parking-map-canvas {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.map-status-legend {
+  right: 16px;
+  bottom: 12px;
+  left: 16px;
+  min-height: 40px;
+  border-radius: 22px;
+  box-shadow: 0 1px 4px #173b3b18;
+}
+
+.map-status-legend span {
+  font-size: 0;
+}
+
+.legend-dot {
+  width: 22px;
+  height: 22px;
+}
+
+.map-results-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-primary);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.map-results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.map-results-heading span {
+  color: #75858a;
+  font-size: 11px;
+}
+
+.map-results-panel .parking-search-note,
+.map-results-panel .mapbox-attribution {
+  flex: none;
+  margin: 0;
+}
+
+.map-results-scroll {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.map-result-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e4eeeb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-result-card.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-surface-soft);
+}
+
+.map-result-card .status-badge {
+  grid-row: span 2;
+  align-self: start;
+}
+
+.map-result-card strong {
+  font-size: 13px;
+}
+
+.map-result-address,
+.map-result-rate {
+  grid-column: 2;
+  font-size: 11px;
+  color: #68777a;
+}
+
+.map-empty-results {
+  margin: 12px 0;
+  color: #68777a;
+  font-size: 13px;
+  text-align: center;
+}
+
+.map-results-panel .selected-spot-detail-card {
+  position: relative;
+  flex: none;
+  padding: 12px;
+  border-width: 1px;
+}
+
+.selected-spot-detail-card h3 {
+  margin: 6px 24px 4px 0;
+  font-size: 15px;
+}
+
+.selected-spot-detail-card p {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.selected-spot-detail-card a {
+  display: inline-block;
+  margin-top: 6px;
+  color: #087e68;
+  font-size: 12px;
+}
+
+.map-detail-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 22px;
+}
+
+.map-spot-popup {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.map-spot-popup-map {
+  position: relative;
+  flex: 0 0 31%;
+  min-height: 180px;
+  background: #d8d8d8;
+}
+
+.map-spot-popup-close {
+  position: absolute;
+  top: max(22px, env(safe-area-inset-top));
+  left: 22px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font-size: 42px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.map-spot-popup-pin {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+}
+
+.map-spot-popup-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 26px 28px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.map-spot-popup-content h2 {
+  margin: 0 0 18px;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.map-spot-status-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.map-spot-status-row .status-badge {
+  min-width: 140px;
+  justify-content: center;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 36px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.map-spot-distance {
+  margin: 12px 0 34px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.map-spot-popup-content h3 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.map-spot-prices {
+  display: grid;
+  gap: 0;
+  margin-bottom: 22px;
+  padding: 8px 14px;
+  border: 2px solid var(--color-primary-soft);
+  border-radius: 20px;
+}
+
+.map-spot-prices > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 4px;
+  font-size: 17px;
+}
+
+.map-spot-prices > div + div {
+  border-top: 2px solid #d6dedb;
+}
+
+.map-spot-prices > p {
+  margin: 10px 4px;
+}
+
+.map-spot-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  margin: 14px 0;
+  font-size: 15px;
+}
+
+.map-spot-primary-action,
+.map-spot-directions {
+  display: flex;
+  width: 100%;
+  min-height: 62px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  border: 2px solid var(--color-primary);
+  border-radius: 25px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.map-spot-directions {
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.active-parking-page-redesign {
+  min-height: calc(100dvh - 86px - env(safe-area-inset-bottom));
+  margin: 0 -24px;
+  padding: 1px 20px 28px;
+  overflow: auto;
+  background: linear-gradient(to bottom, #cef2eb 0, #cef2eb 212px, #ffffff 212px, #ffffff 100%);
+}
+
+.active-parking-page-redesign > .active-parking-header,
+.active-parking-page-redesign > .active-meter-card,
+.active-parking-page-redesign > .timeline-alert-box,
+.active-parking-page-redesign > .result-card {
+  display: none;
+}
+
+.active-parking-redesign-content {
+  display: flex;
+  width: min(100%, 520px);
+  min-height: calc(100dvh - 116px - env(safe-area-inset-bottom));
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 auto;
+  padding: 30px 0 18px;
+}
+
+.active-parking-redesign-content > h2 {
+  margin: 0 0 10px;
+  color: var(--color-text);
+  font-size: 17px;
+  text-align: center;
+}
+
+.active-parking-clock-card {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid var(--color-primary-soft);
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.active-parking-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-parking-budget-label {
+  margin-top: 2px;
+  padding: 2px 14px;
+  border: 1px solid var(--color-primary-soft);
+  border-radius: 15px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.active-parking-clock {
+  display: flex;
+  width: 160px;
+  height: 160px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  border: 9px solid #d9dcdb;
+  border-radius: 50%;
+  color: var(--color-text);
+}
+
+.active-parking-clock span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.active-parking-clock strong {
+  font-size: 29px;
+  letter-spacing: 3px;
+  line-height: 1.2;
+}
+
+.active-parking-clock strong small {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.active-parking-current-fee {
+  padding: 8px 0 0;
+}
+
+.active-parking-fee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.active-parking-fee-row strong:first-child {
+  font-size: 13px;
+}
+
+.active-parking-fee-row strong:last-child {
+  font-size: 28px;
+  letter-spacing: 1px;
+}
+
+.active-parking-progress {
+  height: 17px;
+  overflow: hidden;
+  border: 2px solid var(--color-primary-soft);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.active-parking-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transition: width 400ms ease;
+}
+
+.active-parking-cap-note {
+  display: block;
+  margin-top: 4px;
+  color: #66817c;
+  font-size: 11px;
+  text-align: right;
+}
+
+.active-parking-limits {
+  padding: 10px 8px;
+  border: 1px solid var(--color-primary-soft);
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.active-parking-limit-row {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.active-parking-limit-row + .active-parking-limit-row {
+  border-top: 1px solid #c9d2d0;
+}
+
+.active-parking-limit-row span {
+  white-space: nowrap;
+}
+
+.active-parking-limit-row b {
+  font-size: 24px;
+  letter-spacing: 1px;
+}
+
+.active-parking-more {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.active-parking-more summary {
+  cursor: pointer;
+}
+
+.active-parking-more p {
+  margin: 8px 0;
+}
+
+.active-parking-end-button {
+  width: 100%;
+  min-height: 68px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .active-parking-redesign-content {
+    gap: 16px;
+    padding-top: 22px;
+  }
+
+  .active-parking-clock-card {
+    min-height: 250px;
+  }
+
+  .map-spot-popup-content {
+    padding: 24px 22px 20px;
+  }
+
+  .map-spot-popup-content h2 {
+    font-size: 23px;
+  }
+
+  .map-spot-status-row {
+    gap: 12px;
+    font-size: 15px;
+  }
+
+  .map-spot-status-row .status-badge {
+    min-width: 120px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 700px) {
+  .map-page-container {
+    grid-template-rows: 46px 44px minmax(220px, 1fr) minmax(190px, 28dvh);
+    padding-inline: 24px;
+  }
+
+  .map-view-pane {
+    margin-inline: -24px;
+  }
 }

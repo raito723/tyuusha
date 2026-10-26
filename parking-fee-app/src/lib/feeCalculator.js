@@ -174,7 +174,6 @@ export function findTimeReachingFee(options) {
     }
 
     const current = new Date(start);
-    const hasHolidayRate = Object.values(weekdayRates?.holiday || {}).some((value) => value !== null && value !== undefined && value !== "");
 
     while (current < end) {
         current.setMinutes(current.getMinutes() + 1);
@@ -210,6 +209,8 @@ export function getNextFeeChangeTime({
     const dayEnd = parseTimeToMinutes(dayEndTime, 20 * 60);
     const nightStart = parseTimeToMinutes(nightStartTime, dayEnd);
     const nightEnd = parseTimeToMinutes(nightEndTime, dayStart);
+    const hasHolidayRate = Object.values(weekdayRates?.holiday || {})
+        .some((value) => value !== null && value !== undefined && value !== "");
     const current = new Date(start);
 
     while (current < end) {

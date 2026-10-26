@@ -483,9 +483,10 @@ export function FeeCalculatorPage() {
                 <fieldset className="ocr-review-group">
                     <legend>曜日別・祝日料金</legend>
                     <label className="ocr-toggle-row"><input type="checkbox" checked={weekdayRatesEnabled} onChange={(event) => setWeekdayRatesEnabled(event.target.checked)} />曜日別・祝日料金を設定する</label>
-                    {weekdayRatesEnabled && <>
-                        <p className="help-message">料金の空欄は基本料金、最大料金の空欄は共通の最大料金が適用されます。祝日欄が空欄の場合は該当する曜日の料金を使います。</p>
-                        <div className="ocr-weekday-rate-list">
+                    <div className={`weekday-rate-expand${weekdayRatesEnabled ? " is-open" : ""}`} aria-hidden={!weekdayRatesEnabled} inert={!weekdayRatesEnabled}>
+                        <div className="weekday-rate-expand-inner">
+                            <p className="help-message">料金の空欄は基本料金、最大料金の空欄は共通の最大料金が適用されます。祝日欄が空欄の場合は該当する曜日の料金を使います。</p>
+                            <div className="ocr-weekday-rate-list">
                             {[
                                 ...["日", "月", "火", "水", "木", "金", "土"].map((label, weekday) => ({ key: weekday, label: `${label}曜日` })),
                                 { key: "holiday", label: "祝日" },
@@ -518,8 +519,9 @@ export function FeeCalculatorPage() {
                                     </div>
                                 );
                             })}
+                            </div>
                         </div>
-                    </>}
+                    </div>
                 </fieldset>
 
                 <div>
