@@ -118,6 +118,11 @@ export function ParkingActivePage() {
 
     const maximumFeeTarget = [session.maximumFee, session.maximumFeeDay, session.maximumFeeNight]
         .map(Number).filter((value) => value > 0).sort((left, right) => left - right)[0] || 0;
+    const budgetTarget = Number(session.budget) > 0 ? Number(session.budget) : 0;
+    const progressTarget = maximumFeeTarget || budgetTarget;
+    const feeProgress = progressTarget > 0
+        ? Math.min(100, Math.round((currentFee / progressTarget) * 100))
+        : 0;
     const maximumFeeReachedAt = findTimeReachingFee({
         ...sessionFeeSettings,
         startTime: session.startTime,
@@ -171,7 +176,42 @@ export function ParkingActivePage() {
     };
 
     return (
-        <section className="active-parking-page">
+        <section className="active-parking-page active-parking-page-redesign">
+            <div className="active-parking-redesign-content">
+                <h2>駐車中</h2>
+                <section className="active-parking-clock-card">
+                    <strong className="active-parking-name">{session.ruleName || "パーキング"}</strong>
+                    {budgetTarget > 0 && <span className="active-parking-budget-label">設定金額 ¥{budgetTarget.toLocaleString()}</span>}
+                    <div className="active-parking-clock">
+                        <span>駐車時間</span>
+                        <strong>{String(elapsedHours).padStart(2, "0")}:{String(elapsedMinutes).padStart(2, "0")}<small>:{String(elapsedSeconds).padStart(2, "0")}</small></strong>
+                    </div>
+                </section>
+
+                <section className="active-parking-current-fee">
+                    <div className="active-parking-fee-row"><strong>駐車時間</strong><strong>¥{currentFee.toLocaleString()}</strong></div>
+                    <div className="active-parking-progress" role="progressbar" aria-valuemin={0} aria-valuemax={progressTarget || 100} aria-valuenow={progressTarget ? Math.min(currentFee, progressTarget) : 0}>
+                        <span style={{ width: `${feeProgress}%` }} />
+                    </div>
+                    {currentCalc.maximumFeeApplied && <span className="active-parking-cap-note">最大料金適用中</span>}
+                </section>
+
+                <section className="active-parking-limits">
+                    {maximumFeeTarget > 0 && <div className="active-parking-limit-row"><strong>最大料金まで</strong><span>あと <b>¥{Math.max(0, maximumFeeTarget - currentFee).toLocaleString()}</b></span></div>}
+                    {budgetTarget > 0 && <div className="active-parking-limit-row"><strong>設定金額まで</strong><span>あと <b>¥{Math.max(0, budgetTarget - currentFee).toLocaleString()}</b></span></div>}
+                    {maximumFeeTarget <= 0 && budgetTarget <= 0 && <div className="active-parking-limit-row"><strong>入庫時刻</strong><span>{start.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span></div>}
+                </section>
+
+                {(nextRateChange || budgetReachedAt || maximumFeeReachedAt || session.endTime) && <details className="active-parking-more">
+                    <summary>料金と時間の予定を見る</summary>
+                    {nextRateChange && <p>料金区分の切り替えまであと約{minutesToRateChange}分（{nextRateChange.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}）</p>}
+                    {maximumFeeReachedAt && <p>最大料金到達予定：{maximumFeeReachedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</p>}
+                    {budgetReachedAt && <p>設定金額到達予定：{budgetReachedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</p>}
+                    {session.endTime && <p>予定退場時刻：{new Date(session.endTime).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</p>}
+                </details>}
+
+                <button type="button" className="active-parking-end-button" onClick={handleEndParking}>駐車を終了</button>
+            </div>
             <header className="active-parking-header">
                 <div>
                     <h2>🅿️ 現在駐車中</h2>
