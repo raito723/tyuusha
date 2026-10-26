@@ -1,3 +1,5 @@
+import { isJapanesePublicHoliday } from "./japaneseHolidays";
+
 function parseTimeToMinutes(value, fallback) {
     if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
         return fallback;
@@ -31,6 +33,13 @@ export function calculateParkingFee({
     nightStartTime = "20:00",
     nightEndTime = "08:00",
     nightIntervalMinutes = 60,
+    allDayRate = false,
+    maximumFeeAllDay = true,
+    maximumFeeDay,
+    maximumFeeNight,
+    maximumFeeRecurring = false,
+    maximumFeePeriodHours = 24,
+    weekdayRates = {},
 }) {
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -45,7 +54,8 @@ export function calculateParkingFee({
         };
     }
 
-    if (dayIntervalMinutes <= 0 || nightIntervalMinutes <= 0) {
+    if ((!allDayRate && (dayIntervalMinutes <= 0 || nightIntervalMinutes <= 0))
+        || (allDayRate && dayIntervalMinutes <= 0)) {
         return { error: "単位時間は1分以上を入力してください。" };
     }
 
@@ -54,32 +64,86 @@ export function calculateParkingFee({
     const nightStart = parseTimeToMinutes(nightStartTime, dayEnd);
     const nightEnd = parseTimeToMinutes(nightEndTime, dayStart);
 
+    const totalMinutes = Math.ceil((end.getTime() - start.getTime()) / 60000);
+    const resetMinutes = maximumFeeRecurring && Number(maximumFeePeriodHours) > 0
+        ? Math.round(Number(maximumFeePeriodHours) * 60)
+        : totalMinutes;
+    if (!Number.isFinite(resetMinutes) || resetMinutes < 1) return { error: "最大料金の繰り返し期間を確認してください。" };
+
     let dayMinutes = 0;
     let nightMinutes = 0;
+    let totalRegularFee = 0;
+    let totalCappedFee = 0;
+    let totalDayFee = 0;
+    let totalNightFee = 0;
+    let maximumFeeApplied = false;
+    let offset = 0;
 
-    const current = new Date(start);
-
-    while (current < end) {
-        if (getRatePeriod(current, dayStart, dayEnd, nightStart, nightEnd) === "day") {
-            dayMinutes += 1;
-        } else {
-            nightMinutes += 1;
+    while (offset < totalMinutes) {
+        const windowEnd = Math.min(totalMinutes, offset + resetMinutes);
+        const buckets = new Map();
+        const current = new Date(start.getTime() + offset * 60000);
+        const windowStart = new Date(current);
+        for (let minute = offset; minute < windowEnd; minute += 1) {
+            const weekday = current.getDay();
+            const period = allDayRate ? "day" : getRatePeriod(current, dayStart, dayEnd, nightStart, nightEnd);
+            const weekdayRate = weekdayRates?.[weekday] || weekdayRates?.[String(weekday)] || {};
+            const holidayRate = isJapanesePublicHoliday(current) ? weekdayRates?.holiday : null;
+            const periodRate = holidayRate?.[period === "day" ? "dayPrice" : "nightPrice"]
+                ?? weekdayRate[period === "day" ? "dayPrice" : "nightPrice"];
+            const periodInterval = holidayRate?.[period === "day" ? "dayIntervalMinutes" : "nightIntervalMinutes"]
+                ?? weekdayRate[period === "day" ? "dayIntervalMinutes" : "nightIntervalMinutes"];
+            const rate = period === "day"
+                ? { interval: Number(periodInterval) || Number(dayIntervalMinutes), price: Number(periodRate ?? dayPrice) || 0 }
+                : { interval: Number(periodInterval) || Number(nightIntervalMinutes), price: Number(periodRate ?? nightPrice) || 0 };
+            const key = `${period}-${rate.interval}-${rate.price}`;
+            const bucket = buckets.get(key) || { period, interval: rate.interval, price: rate.price, minutes: 0 };
+            bucket.minutes += 1;
+            buckets.set(key, bucket);
+            if (period === "day") dayMinutes += 1;
+            else nightMinutes += 1;
+            current.setMinutes(current.getMinutes() + 1);
         }
 
-        current.setMinutes(current.getMinutes() + 1);
+        let windowDayFee = 0;
+        let windowNightFee = 0;
+        for (const bucket of buckets.values()) {
+            const fee = Math.ceil(bucket.minutes / bucket.interval) * bucket.price;
+            if (bucket.period === "day") windowDayFee += fee;
+            else windowNightFee += fee;
+        }
+        const windowRegularFee = windowDayFee + windowNightFee;
+        const capWeekdayRate = weekdayRates?.[windowStart.getDay()] || weekdayRates?.[String(windowStart.getDay())] || {};
+        const capHolidayRate = isJapanesePublicHoliday(windowStart) ? weekdayRates?.holiday : null;
+        const dayCapValue = capHolidayRate?.maximumFeeDay ?? capWeekdayRate.maximumFeeDay ?? maximumFeeDay;
+        const nightCapValue = capHolidayRate?.maximumFeeNight ?? capWeekdayRate.maximumFeeNight ?? maximumFeeNight;
+        const maximumFeeValue = capHolidayRate?.maximumFee ?? capWeekdayRate.maximumFee ?? maximumFee;
+        const dayCap = Number(dayCapValue ?? 0) > 0 ? Number(dayCapValue) : 0;
+        const nightCap = Number(nightCapValue ?? 0) > 0 ? Number(nightCapValue) : 0;
+        const singleCap = Number(maximumFeeValue ?? 0) > 0 ? Number(maximumFeeValue) : 0;
+        const windowFee = maximumFeeAllDay
+            ? (singleCap > 0 ? Math.min(windowRegularFee, singleCap) : windowRegularFee)
+            : (dayCap > 0 ? Math.min(windowDayFee, dayCap) : windowDayFee)
+                + (nightCap > 0 ? Math.min(windowNightFee, nightCap) : windowNightFee);
+        const windowMaximumReached = maximumFeeAllDay
+            ? singleCap > 0 && windowRegularFee >= singleCap
+            : (dayCap > 0 && windowDayFee >= dayCap) || (nightCap > 0 && windowNightFee >= nightCap);
+        maximumFeeApplied ||= windowMaximumReached;
+        totalRegularFee += windowRegularFee;
+        totalCappedFee += windowFee;
+        totalDayFee += maximumFeeAllDay && windowRegularFee > 0
+            ? windowDayFee * windowFee / windowRegularFee
+            : (dayCap > 0 ? Math.min(windowDayFee, dayCap) : windowDayFee);
+        totalNightFee += maximumFeeAllDay && windowRegularFee > 0
+            ? windowNightFee * windowFee / windowRegularFee
+            : (nightCap > 0 ? Math.min(windowNightFee, nightCap) : windowNightFee);
+        offset = windowEnd;
     }
 
-    const dayUnits = Math.ceil(dayMinutes / dayIntervalMinutes);
-    const nightUnits = Math.ceil(nightMinutes / nightIntervalMinutes);
-
-    const dayFee = dayUnits * dayPrice;
-    const nightFee = nightUnits * nightPrice;
-    const regularFee = dayFee + nightFee;
-
-    const hasMaximumFee = maximumFee > 0;
-    const totalFee = hasMaximumFee
-        ? Math.min(regularFee, maximumFee)
-        : regularFee;
+    const regularFee = totalRegularFee;
+    const dayFee = Math.round(totalDayFee);
+    const nightFee = Math.round(totalNightFee);
+    const totalFee = totalCappedFee;
 
     return {
         dayMinutes,
@@ -88,7 +152,7 @@ export function calculateParkingFee({
         nightFee,
         regularFee,
         totalFee,
-        maximumFeeApplied: hasMaximumFee && regularFee >= maximumFee,
+        maximumFeeApplied,
     };
 }
 // 料金が指定額に達する最初の時刻を探す処理
@@ -131,6 +195,8 @@ export function getNextFeeChangeTime({
     dayEndTime = "20:00",
     nightStartTime = "20:00",
     nightEndTime = "08:00",
+    allDayRate = false,
+    weekdayRates = {},
 }) {
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -143,6 +209,8 @@ export function getNextFeeChangeTime({
     const dayEnd = parseTimeToMinutes(dayEndTime, 20 * 60);
     const nightStart = parseTimeToMinutes(nightStartTime, dayEnd);
     const nightEnd = parseTimeToMinutes(nightEndTime, dayStart);
+    const hasHolidayRate = Object.values(weekdayRates?.holiday || {})
+        .some((value) => value !== null && value !== undefined && value !== "");
     const current = new Date(start);
 
     while (current < end) {
@@ -151,8 +219,10 @@ export function getNextFeeChangeTime({
 
         const wasDayTime = getRatePeriod(before, dayStart, dayEnd, nightStart, nightEnd) === "day";
         const isDayTime = getRatePeriod(current, dayStart, dayEnd, nightStart, nightEnd) === "day";
+        const weekdayChanged = Object.keys(weekdayRates || {}).length > 0 && before.getDay() !== current.getDay();
+        const holidayChanged = hasHolidayRate && isJapanesePublicHoliday(before) !== isJapanesePublicHoliday(current);
 
-        if (wasDayTime !== isDayTime) {
+        if (weekdayChanged || holidayChanged || (!allDayRate && wasDayTime !== isDayTime)) {
             return current;
         }
     }

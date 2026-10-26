@@ -81,8 +81,10 @@ export function ParkingMap({
     const userMarkerRef = useRef(null);
     const userLocationRef = useRef(userLocation);
     const mapLoadedRef = useRef(false);
+    const mapStyleRef = useRef("streets");
     const onSelectSpotRef = useRef(onSelectSpot);
     const [mapError, setMapError] = useState("");
+    const [mapStyle, setMapStyle] = useState("streets");
     const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     userLocationRef.current = userLocation;
 
@@ -103,7 +105,9 @@ export function ParkingMap({
             : center;
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: "mapbox://styles/mapbox/streets-v12",
+            style: mapStyleRef.current === "satellite"
+                ? "mapbox://styles/mapbox/standard-satellite"
+                : "mapbox://styles/mapbox/streets-v12",
             center: initialCenter,
             zoom,
             language: "ja",
@@ -119,6 +123,9 @@ export function ParkingMap({
         map.once("load", () => {
             mapLoadedRef.current = true;
             setMapError("");
+            if (mapStyleRef.current === "satellite") {
+                map.setStyle("mapbox://styles/mapbox/standard-satellite");
+            }
             updateUserLocation(map, userLocationRef.current, userMarkerRef, false);
         });
 
@@ -184,6 +191,32 @@ export function ParkingMap({
     return (
         <div className="parking-map-shell">
             <div ref={mapContainerRef} className="parking-map-canvas" />
+            <div className="parking-map-style-switch" role="group" aria-label="地図の種類">
+                <button
+                    type="button"
+                    className={mapStyle === "streets" ? "is-active" : ""}
+                    aria-pressed={mapStyle === "streets"}
+                    onClick={() => {
+                        mapStyleRef.current = "streets";
+                        setMapStyle("streets");
+                        if (mapRef.current && mapLoadedRef.current) {
+                            mapRef.current.setStyle("mapbox://styles/mapbox/streets-v12");
+                        }
+                    }}
+                >地図</button>
+                <button
+                    type="button"
+                    className={mapStyle === "satellite" ? "is-active" : ""}
+                    aria-pressed={mapStyle === "satellite"}
+                    onClick={() => {
+                        mapStyleRef.current = "satellite";
+                        setMapStyle("satellite");
+                        if (mapRef.current && mapLoadedRef.current) {
+                            mapRef.current.setStyle("mapbox://styles/mapbox/standard-satellite");
+                        }
+                    }}
+                >衛星写真</button>
+            </div>
             {!userLocation && !mapError && (
                 <div className="parking-map-error" role="status">現在地を取得すると地図を表示します。</div>
             )}
