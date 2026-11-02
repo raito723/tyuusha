@@ -6,7 +6,7 @@ import { ParkingActivePage } from "./pages/ParkingActivePage";
 import { ParkingMapPage } from "./pages/ParkingMapPage";
 import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 import { NotificationToast } from "./components/NotificationToast";
-import { PremiumPage } from "./pages/PremiumPage";
+import { PremiumPage } from "./pages/Premiumpage";
 
 export const IconlyCamera = ({ size = 24, color = "#000000" }) => (
   <svg
