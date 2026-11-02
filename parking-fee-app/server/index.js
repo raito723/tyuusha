@@ -161,7 +161,7 @@ async function extractParkingRule(imageBuffer, mimeType) {
         throw error;
     }
 
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const requestBody = JSON.stringify({
             contents: [{
@@ -255,7 +255,8 @@ app.post("/api/ocr/extract", ocrRateLimit, upload.single("image"), async (reques
     if (!mimeType) return response.status(415).json({ error: "PNG、JPEG、WebP形式の画像を選択してください。" });
 
     try {
-        const { rule, rawText } = await extractParkingRule(request.file.buffer, mimeType);
+        const result = await extractParkingRule(request.file.buffer, mimeType);
+        const { rule, rawText } = result;
         response.json({ rule, rawText });
     } catch (error) {
         console.error("Gemini OCR processing failed:", error.message);

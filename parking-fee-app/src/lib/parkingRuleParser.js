@@ -110,3 +110,28 @@ export function structureParkingRule(rawText) {
         ...maximum,
     };
 }
+
+export function normalizeOcrTextResult(rawText) {
+    const rule = structureParkingRule(rawText);
+    const hasDayNightLabels = /昼間|日中|夜間|昼料金|夜料金/.test(rawText);
+    const hasTimePeriods = rule.dayStartTime !== null || rule.nightStartTime !== null;
+    const allDayRate = /終日|24時間/.test(rawText)
+        || (!hasDayNightLabels && !hasTimePeriods && rule.dayPriceYen !== null && rule.nightPriceYen === null);
+
+    return {
+        rawText: rawText.slice(0, 20_000),
+        rule: {
+            ...rule,
+            dayStartTime: rule.dayStartTime || (allDayRate ? "00:00" : null),
+            dayEndTime: rule.dayEndTime || (allDayRate ? "00:00" : null),
+            maximumFeeDayYen: null,
+            maximumFeeNightYen: null,
+            maximumFeePeriod: rule.maximumFeePeriod || "",
+            maximumFeePeriodHours: Number(rule.maximumFeePeriod?.match(/(\d+)\s*時間/)?.[1]) || 24,
+            allDayRate,
+            maximumFeeAllDay: !/昼間最大|夜間最大|昼最大|夜最大/.test(rawText),
+            maximumFeeRecurring: /繰り返し|繰返し/.test(rawText),
+            weekdayRates: {},
+        },
+    };
+}

@@ -27,6 +27,14 @@ export function PremiumPage() {
 
     return (
         <section className="premium-page" aria-labelledby="premium-title">
+            <div className="premium-decorations" aria-hidden="true">
+                <span className="premium-decoration premium-decoration-triangle" />
+                <span className="premium-decoration premium-decoration-circle" />
+                <span className="premium-decoration premium-decoration-square" />
+                <span className="premium-decoration premium-decoration-circle-small" />
+                <span className="premium-decoration premium-decoration-triangle-small" />
+                <span className="premium-decoration premium-decoration-square-small" />
+            </div>
             <div className="premium-hero">
                 <p className="premium-catch">もっとお得に＆もっと便利にするなら</p>
                 <h2 id="premium-title" className="premium-title">プレミアムプラン</h2>
