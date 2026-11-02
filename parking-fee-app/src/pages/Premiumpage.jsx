@@ -38,16 +38,16 @@ export function PremiumPage() {
             <div className="premium-hero">
                 <p className="premium-catch">もっとお得に＆もっと便利にするなら</p>
                 <h2 id="premium-title" className="premium-title">プレミアムプラン</h2>
-                <p className="premium-subtitle">始めてみませんか？</p>
+                <p className="premium-catch">始めてみませんか？</p>
             </div>
 
-            <div className="premium-price" aria-label="月額480円（税込）、初めての方は1ヶ月無料">
-                <div className="premium-price-monthly">
+            <div className="premium-price" aria-label="月額480円（税込）。初めての方は1ヶ月無料">
+                <div className="premium-price-amount-line">
                     <span className="premium-price-label">月額</span>
                     <strong className="premium-price-amount">480円</strong>
                     <small className="premium-price-tax">（税込）</small>
                 </div>
-                <p className="premium-free-trial">初めての方は<strong>1ヶ月無料</strong></p>
+                <strong className="premium-price-trial">初めての方は1ヶ月無料</strong>
             </div>
 
             <ul className="premium-benefits">

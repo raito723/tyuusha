@@ -373,9 +373,16 @@ header h1 {
   gap: 8px;
 }
 
+.premium-price-amount-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
 .premium-price-label,
 .premium-price-amount {
-  font-size: 25px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -384,17 +391,10 @@ header h1 {
   font-weight: 700;
 }
 
-.premium-free-trial {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.premium-free-trial strong {
-  font-size: 30px;
-  font-weight: 900;
-  white-space: nowrap;
+.premium-price-trial {
+  color: #a76d00;
+  font-size: 24px;
+  font-weight: 800;
 }
 
 .premium-benefits {
@@ -436,13 +436,13 @@ header h1 {
 }
 
 .premium-benefit-text strong {
-  font-size: 19px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .premium-benefit-text span {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .premium-actions {
@@ -2958,7 +2958,7 @@ main:has(.map-page-container) {
   border-radius: 20px;
 }
 
-.map-spot-prices > div {
+.map-spot-prices>div {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -2966,11 +2966,11 @@ main:has(.map-page-container) {
   font-size: 17px;
 }
 
-.map-spot-prices > div + div {
+.map-spot-prices>div+div {
   border-top: 2px solid #d6dedb;
 }
 
-.map-spot-prices > p {
+.map-spot-prices>p {
   margin: 10px 4px;
 }
 
@@ -3013,10 +3013,10 @@ main:has(.map-page-container) {
   background: linear-gradient(to bottom, #cef2eb 0, #cef2eb 212px, #ffffff 212px, #ffffff 100%);
 }
 
-.active-parking-page-redesign > .active-parking-header,
-.active-parking-page-redesign > .active-meter-card,
-.active-parking-page-redesign > .timeline-alert-box,
-.active-parking-page-redesign > .result-card {
+.active-parking-page-redesign>.active-parking-header,
+.active-parking-page-redesign>.active-meter-card,
+.active-parking-page-redesign>.timeline-alert-box,
+.active-parking-page-redesign>.result-card {
   display: none;
 }
 
@@ -3030,7 +3030,7 @@ main:has(.map-page-container) {
   padding: 30px 0 18px;
 }
 
-.active-parking-redesign-content > h2 {
+.active-parking-redesign-content>h2 {
   margin: 0 0 10px;
   color: var(--color-text);
   font-size: 17px;
@@ -3160,7 +3160,7 @@ main:has(.map-page-container) {
   font-size: 13px;
 }
 
-.active-parking-limit-row + .active-parking-limit-row {
+.active-parking-limit-row+.active-parking-limit-row {
   border-top: 1px solid #c9d2d0;
 }
 
