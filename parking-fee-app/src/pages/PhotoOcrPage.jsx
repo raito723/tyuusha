@@ -274,20 +274,29 @@ export function PhotoOcrPage() {
     }
 
     function handleStartParking() {
-        const missing = REQUIRED_FIELDS.filter((field) => isMissing(reviewData[field.key]));
-        if (missing.length) {
+        const missingRate = requiredRateFields.some((key) => isMissing(reviewData[key]));
+        if (missingRate) {
             setMessage("昼料金または夜料金を読み取れませんでした。料金表の写真を撮り直してください。");
             return;
         }
 
-        const invalidNumber = ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"]
+        const rateFields = reviewData.allDayRate
+            ? ["dayIntervalMinutes", "dayPriceYen"]
+            : ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
+        const invalidNumber = rateFields
             .some((key) => !Number.isFinite(Number(reviewData[key])) || Number(reviewData[key]) < 0);
-        const invalidMaximumFee = !isMissing(reviewData.maximumFeeYen)
-            && (!Number.isFinite(Number(reviewData.maximumFeeYen)) || Number(reviewData.maximumFeeYen) < 0);
-        const invalidTime = ["dayStartTime", "dayEndTime", "nightStartTime", "nightEndTime"]
+        const maximumFeeFields = ["maximumFeeYen", "maximumFeeDayYen", "maximumFeeNightYen"];
+        const invalidMaximumFee = maximumFeeFields.some((key) => !isMissing(reviewData[key])
+            && (!Number.isFinite(Number(reviewData[key])) || Number(reviewData[key]) < 0));
+        const timeFields = reviewData.allDayRate
+            ? ["dayStartTime", "dayEndTime"]
+            : ["dayStartTime", "dayEndTime", "nightStartTime", "nightEndTime"];
+        const invalidTime = timeFields
             .some((key) => !/^\d{2}:\d{2}$/.test(reviewData[key] || ""));
-        if (invalidNumber || invalidMaximumFee || invalidTime || Number(reviewData.dayIntervalMinutes) < 1 || Number(reviewData.nightIntervalMinutes) < 1) {
-            setIsEditingRates(true);
+        const invalidInterval = rateFields
+            .filter((key) => key.endsWith("IntervalMinutes"))
+            .some((key) => Number(reviewData[key]) < 1);
+        if (invalidNumber || invalidMaximumFee || invalidTime || invalidInterval) {
             setMessage("最大料金などの入力内容を確認してください。");
             return;
         }
@@ -422,12 +431,11 @@ export function PhotoOcrPage() {
         }
     }
 
-<<<<<<< HEAD
-    const hasMissingRequiredRate = reviewData
-        ? REQUIRED_FIELDS.some((field) => isMissing(reviewData[field.key]))
-        : false;
-=======
->>>>>>> 3e49def7dad9a1c2e558fcb68397ddcfbdb6e46f
+    const requiredRateFields = reviewData?.allDayRate
+        ? ["dayIntervalMinutes", "dayPriceYen"]
+        : ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
+    const hasMissingRequiredRate = Boolean(reviewData)
+        && requiredRateFields.some((key) => isMissing(reviewData[key]));
     const liveStartTime = timeMode === "duration" ? durationStartTime : parkingStartTime;
     const liveEndTime = timeMode === "duration"
         ? toLocalDateTimeValue(new Date(new Date(durationStartTime).getTime() + Number(durationMinutes) * 60000))
@@ -530,14 +538,10 @@ export function PhotoOcrPage() {
                                 ))}
                             </div>
                         ) : (
-<<<<<<< HEAD
-                            <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直してください。</p>
+                            <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直すか、下の入力欄から入力してください。</p>
                         )}
                         {rateRows.length > 0 && hasMissingRequiredRate && (
                             <p className="ocr-reading-warning" role="status">昼料金または夜料金を読み取れませんでした。料金表の写真を撮り直してください。</p>
-=======
-                            <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直すか、下の入力欄から入力してください。</p>
->>>>>>> 3e49def7dad9a1c2e558fcb68397ddcfbdb6e46f
                         )}
 
                         <div className="ocr-rate-editor">
@@ -566,24 +570,6 @@ export function PhotoOcrPage() {
                                 </div>
                             </fieldset>
 
-<<<<<<< HEAD
-                        {isEditingRates && (
-                            <div className="ocr-rate-editor">
-                                <fieldset className="ocr-review-group">
-                                    <legend>最大料金</legend>
-                                    <div className="ocr-review-grid">
-                                        {REVIEW_FIELDS.filter((field) => field.group === "最大料金").map((field) => (
-                                            <label className="ocr-review-field" key={field.key}>
-                                                <span>{field.label}</span>
-                                                <input type={field.type} min={field.type === "number" ? 0 : undefined} step="1" value={reviewData[field.key] ?? ""} onChange={(event) => handleFieldChange(field.key, event.target.value, field.type)} placeholder="任意" />
-                                            </label>
-                                        ))}
-                                    </div>
-                                </fieldset>
-                                {rawText && <details className="ocr-raw-text"><summary>OCRで抽出した文字列</summary><pre>{rawText}</pre></details>}
-                            </div>
-                        )}
-=======
                             <fieldset className="ocr-review-group">
                                 <legend>最大料金</legend>
                                 <label className="ocr-toggle-row">
@@ -631,7 +617,6 @@ export function PhotoOcrPage() {
                             </fieldset>
                             {rawText && <details className="ocr-raw-text"><summary>AIが読み取った文字</summary><pre>{rawText}</pre></details>}
                         </div>
->>>>>>> 3e49def7dad9a1c2e558fcb68397ddcfbdb6e46f
                     </div>
                     {message && <p className="error-message" role="alert">{message}</p>}
                     <div className="ocr-result-actions">
