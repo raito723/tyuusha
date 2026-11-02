@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { structureParkingRule } from "./parkingRuleParser.js";
+import { normalizeOcrTextResult, structureParkingRule } from "../src/lib/parkingRuleParser.js";
 
 test("extracts labeled daytime, nighttime, parking name, and maximum fee", () => {
     const rule = structureParkingRule([
@@ -76,4 +76,28 @@ test("normalizes full-width digits and Japanese time notation", () => {
     assert.equal(rule.dayEndTime, "19:00");
     assert.equal(rule.dayPriceYen, 250);
     assert.equal(rule.nightPriceYen, 100);
+});
+
+test("normalizes OCR text to the review page rule shape", () => {
+    const result = normalizeOcrTextResult([
+        "昼間 8:00〜20:00 30分 200円",
+        "夜間 20:00〜8:00 60分 100円",
+        "当日最大 1,500円",
+    ].join("\n"));
+
+    assert.equal(result.rule.dayPriceYen, 200);
+    assert.equal(result.rule.nightPriceYen, 100);
+    assert.equal(result.rule.maximumFeeYen, 1500);
+    assert.equal(result.rule.allDayRate, false);
+    assert.equal(result.rule.maximumFeePeriodHours, 24);
+    assert.deepEqual(result.rule.weekdayRates, {});
+});
+
+test("normalizes an explicitly all-day OCR rate", () => {
+    const result = normalizeOcrTextResult("終日 30分 200円");
+
+    assert.equal(result.rule.allDayRate, true);
+    assert.equal(result.rule.dayStartTime, "00:00");
+    assert.equal(result.rule.dayEndTime, "00:00");
+    assert.equal(result.rule.dayPriceYen, 200);
 });

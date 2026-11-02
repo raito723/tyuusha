@@ -4,6 +4,7 @@ import { calculateParkingFee } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
 import { saveActiveSession } from "../lib/sessionStorage";
 import { notificationService } from "../lib/notificationService";
+import { normalizeOcrTextResult } from "../lib/parkingRuleParser";
 
 const REVIEW_FIELDS = [
     { key: "dayStartTime", label: "開始時刻", type: "time" },
@@ -215,9 +216,22 @@ export function PhotoOcrPage() {
         formData.append("image", file);
 
         try {
-            const response = await fetch("/api/ocr/extract", { method: "POST", body: formData });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || "画像を解析できませんでした。");
+            let result;
+            if (import.meta.env.DEV) {
+                const { createWorker } = await import("tesseract.js");
+                const worker = await createWorker("jpn");
+                try {
+                    const { data } = await worker.recognize(file);
+                    if (!data.text.trim()) throw new Error("画像から文字を読み取れませんでした。写真を撮り直してください。");
+                    result = normalizeOcrTextResult(data.text);
+                } finally {
+                    await worker.terminate();
+                }
+            } else {
+                const response = await fetch("/api/ocr/extract", { method: "POST", body: formData });
+                result = await response.json();
+                if (!response.ok) throw new Error(result.error || "画像を解析できませんでした。");
+            }
             setReviewData({
                 maximumFeeRecurring: false,
                 maximumFeeAllDay: true,
@@ -332,20 +346,12 @@ export function PhotoOcrPage() {
     }
 
     function handlePrepay() {
-        navigate("/calculator", {
+        navigate("/prepay", {
             state: {
-                presetRule: {
-                    name: "料金表から読み取ったルール",
-                    dayStartTime: reviewData.dayStartTime,
-                    dayEndTime: reviewData.dayEndTime,
-                    dayIntervalMinutes: Number(reviewData.dayIntervalMinutes),
-                    dayPrice: Number(reviewData.dayPriceYen),
-                    nightStartTime: reviewData.nightStartTime,
-                    nightEndTime: reviewData.nightEndTime,
-                    nightIntervalMinutes: Number(reviewData.nightIntervalMinutes),
-                    nightPrice: Number(reviewData.nightPriceYen),
-                    maximumFee: Number(reviewData.maximumFeeYen ?? 0),
-                },
+                amount: liveEstimate && !liveEstimate.error ? liveEstimate.totalFee : null,
+                durationMinutes: estimatedParkingMinutes,
+                startTime: liveStartTime,
+                endTime: liveEndTime,
             },
         });
     }

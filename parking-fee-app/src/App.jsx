@@ -8,6 +8,7 @@ import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 import { NotificationToast } from "./components/NotificationToast";
 import { PremiumPage } from "./pages/Premiumpage";
 import { SavedPage } from "./pages/SavedPage";
+import { PrepayPage } from "./pages/PrepayPage";
 import homeIcon from "./assets/home.png";
 import pinIcon from "./assets/pin.png";
 import pinOffIcon from "./assets/pin_off.png";
@@ -130,6 +131,7 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/map" element={<ParkingMapPage />} />
           <Route path="/ocr" element={<PhotoOcrPage />} />
+          <Route path="/prepay" element={<PrepayPage />} />
           <Route path="/premium" element={<PremiumPage />} />
         </Routes>
 
