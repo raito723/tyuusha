@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateParkingFee } from "../lib/feeCalculator";
 import { getParkingRules, saveParkingRules } from "../lib/parkingRules";
+import { saveActiveSession } from "../lib/sessionStorage";
+import { notificationService } from "../lib/notificationService";
+import { normalizeOcrTextResult } from "../lib/parkingRuleParser";
 
 const REVIEW_FIELDS = [
     { key: "dayStartTime", label: "開始時刻", type: "time" },
@@ -213,9 +216,22 @@ export function PhotoOcrPage() {
         formData.append("image", file);
 
         try {
-            const response = await fetch("/api/ocr/extract", { method: "POST", body: formData });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || "画像を解析できませんでした。");
+            let result;
+            if (import.meta.env.DEV) {
+                const { createWorker } = await import("tesseract.js");
+                const worker = await createWorker("jpn");
+                try {
+                    const { data } = await worker.recognize(file);
+                    if (!data.text.trim()) throw new Error("画像から文字を読み取れませんでした。写真を撮り直してください。");
+                    result = normalizeOcrTextResult(data.text);
+                } finally {
+                    await worker.terminate();
+                }
+            } else {
+                const response = await fetch("/api/ocr/extract", { method: "POST", body: formData });
+                result = await response.json();
+                if (!response.ok) throw new Error(result.error || "画像を解析できませんでした。");
+            }
             setReviewData({
                 maximumFeeRecurring: false,
                 maximumFeeAllDay: true,
@@ -269,6 +285,75 @@ export function PhotoOcrPage() {
         setSavedRule(null);
         setMessage("");
         setPageStep("capture");
+    }
+
+    function handleStartParking() {
+        const missingRate = requiredRateFields.some((key) => isMissing(reviewData[key]));
+        if (missingRate) {
+            setMessage("昼料金または夜料金を読み取れませんでした。料金表の写真を撮り直してください。");
+            return;
+        }
+
+        const rateFields = reviewData.allDayRate
+            ? ["dayIntervalMinutes", "dayPriceYen"]
+            : ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
+        const invalidNumber = rateFields
+            .some((key) => !Number.isFinite(Number(reviewData[key])) || Number(reviewData[key]) < 0);
+        const maximumFeeFields = ["maximumFeeYen", "maximumFeeDayYen", "maximumFeeNightYen"];
+        const invalidMaximumFee = maximumFeeFields.some((key) => !isMissing(reviewData[key])
+            && (!Number.isFinite(Number(reviewData[key])) || Number(reviewData[key]) < 0));
+        const timeFields = reviewData.allDayRate
+            ? ["dayStartTime", "dayEndTime"]
+            : ["dayStartTime", "dayEndTime", "nightStartTime", "nightEndTime"];
+        const invalidTime = timeFields
+            .some((key) => !/^\d{2}:\d{2}$/.test(reviewData[key] || ""));
+        const invalidInterval = rateFields
+            .filter((key) => key.endsWith("IntervalMinutes"))
+            .some((key) => Number(reviewData[key]) < 1);
+        if (invalidNumber || invalidMaximumFee || invalidTime || invalidInterval) {
+            setMessage("最大料金などの入力内容を確認してください。");
+            return;
+        }
+
+        const session = {
+            id: `session-${Date.now()}`,
+            ruleName: "料金表から読み取ったルール",
+            startTime: new Date().toISOString(),
+            endTime: null,
+            dayStartTime: reviewData.dayStartTime,
+            dayEndTime: reviewData.dayEndTime,
+            dayIntervalMinutes: Number(reviewData.dayIntervalMinutes),
+            dayPrice: Number(reviewData.dayPriceYen),
+            nightStartTime: reviewData.nightStartTime,
+            nightEndTime: reviewData.nightEndTime,
+            nightIntervalMinutes: Number(reviewData.nightIntervalMinutes),
+            nightPrice: Number(reviewData.nightPriceYen),
+            maximumFee: Number(reviewData.maximumFeeYen ?? 0),
+            budget: 0,
+        };
+
+        try {
+            saveActiveSession(session);
+            notificationService.notify({
+                title: "🚗 駐車を開始しました",
+                body: "料金表から読み取ったルールでリアルタイム計測を開始しました。",
+                type: "general",
+            });
+            navigate("/parking");
+        } catch {
+            setMessage("駐車を開始できませんでした。ブラウザーの保存容量を確認してください。");
+        }
+    }
+
+    function handlePrepay() {
+        navigate("/prepay", {
+            state: {
+                amount: liveEstimate && !liveEstimate.error ? liveEstimate.totalFee : null,
+                durationMinutes: estimatedParkingMinutes,
+                startTime: liveStartTime,
+                endTime: liveEndTime,
+            },
+        });
     }
 
     function handleCalculateFee(event) {
@@ -352,6 +437,11 @@ export function PhotoOcrPage() {
         }
     }
 
+    const requiredRateFields = reviewData?.allDayRate
+        ? ["dayIntervalMinutes", "dayPriceYen"]
+        : ["dayIntervalMinutes", "dayPriceYen", "nightIntervalMinutes", "nightPriceYen"];
+    const hasMissingRequiredRate = Boolean(reviewData)
+        && requiredRateFields.some((key) => isMissing(reviewData[key]));
     const liveStartTime = timeMode === "duration" ? durationStartTime : parkingStartTime;
     const liveEndTime = timeMode === "duration"
         ? toLocalDateTimeValue(new Date(new Date(durationStartTime).getTime() + Number(durationMinutes) * 60000))
@@ -436,22 +526,28 @@ export function PhotoOcrPage() {
                     </div>
                     {previewUrl && <img className="ocr-result-image" src={previewUrl} alt="読み取りに使用した料金表" />}
                     <div className="ocr-result-content">
+                        <div className="ocr-success-illustration" aria-hidden="true">
+                            <span className="ocr-confetti ocr-confetti-one" />
+                            <span className="ocr-confetti ocr-confetti-two" />
+                            <span className="ocr-confetti ocr-confetti-three" />
+                            <span className="ocr-confetti ocr-confetti-four" />
+                            <span className="ocr-success-check">✓</span>
+                        </div>
                         <h3>料金を読み取りました</h3>
                         {rateRows.length > 0 ? (
                             <div className="ocr-rate-list">
                                 {rateRows.map((row) => (
                                     <div className="ocr-rate-row" key={row.key}>
-                                        <div>
-                                            <b>{row.label}</b>
-                                            {row.period && <small>{row.period}</small>}
-                                        </div>
-                                        <span>{row.duration ? `${row.duration}分` : ""}</span>
+                                        <b>{row.duration ? `${row.duration}分` : row.label}</b>
                                         <strong>¥{Number(row.amount).toLocaleString()}</strong>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             <p className="ocr-reading-warning" role="status">料金を読み取れませんでした。料金表を撮り直すか、下の入力欄から入力してください。</p>
+                        )}
+                        {rateRows.length > 0 && hasMissingRequiredRate && (
+                            <p className="ocr-reading-warning" role="status">昼料金または夜料金を読み取れませんでした。料金表の写真を撮り直してください。</p>
                         )}
 
                         <div className="ocr-rate-editor">
@@ -529,9 +625,14 @@ export function PhotoOcrPage() {
                         </div>
                     </div>
                     {message && <p className="error-message" role="alert">{message}</p>}
-                    <button type="button" className="ocr-primary-action" onClick={() => { setMessage(""); setPageStep("time"); }}>
-                        この料金で計算する
-                    </button>
+                    <div className="ocr-result-actions">
+                        <button type="button" className="ocr-primary-action" onClick={handleStartParking}>
+                            この料金で開始する
+                        </button>
+                        <button type="button" className="ocr-secondary-action" onClick={handlePrepay}>
+                            この料金で事前精算する
+                        </button>
+                    </div>
                 </section>
             )}
 
