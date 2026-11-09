@@ -7,12 +7,19 @@ import { ParkingMapPage } from "./pages/ParkingMapPage";
 import { PhotoOcrPage } from "./pages/PhotoOcrPage";
 import { NotificationToast } from "./components/NotificationToast";
 import { PremiumPage } from "./pages/Premiumpage";
+<<<<<<< Updated upstream
 import { SavedPage } from "./pages/SavedPage";
 import { PrepayPage } from "./pages/PrepayPage";
 import homeIcon from "./assets/home.png";
 import pinIcon from "./assets/pin.png";
 import pinOffIcon from "./assets/pin_off.png";
 import cameraIcon from "./assets/camera.png";
+=======
+import { PremiumDetailPage } from "./pages/PremiumDetailPage";
+import { PremiumJoinPage } from "./pages/PremiumJoinPage";
+import { AccountPage } from "./pages/AccountPage";
+
+>>>>>>> Stashed changes
 export const IconlyCamera = ({ size = 24, color = "#000000" }) => (
   <svg
     width={size}
@@ -133,6 +140,9 @@ function App() {
           <Route path="/ocr" element={<PhotoOcrPage />} />
           <Route path="/prepay" element={<PrepayPage />} />
           <Route path="/premium" element={<PremiumPage />} />
+          <Route path="/premium/detail" element={<PremiumDetailPage />} />
+          <Route path="/premium/join" element={<PremiumJoinPage />} />
+          <Route path="/account" element={<AccountPage />} />
         </Routes>
 
         {/* リアルタイム通知トースト */}
