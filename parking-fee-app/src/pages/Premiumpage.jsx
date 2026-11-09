@@ -21,7 +21,6 @@ export function PremiumPage() {
     };
 
     const handleDetail = () => {
-        // TODO: 詳細ページができたらパスを合わせる
         navigate("/premium/detail");
     };
 
